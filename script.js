@@ -54,15 +54,15 @@ function setupLighting() {
 function loadFontAndCreateText() {
   const loader = new THREE.FontLoader();
 
-  loader.load("../fonts/Baby_Gemoy_Regular.json", function (font) {
-    createTextMeshes(font);
-  });
-  // loader.load(
-  //   "https://threejs.org/examples/fonts/helvetiker_bold.typeface.json",
-  //   function (font) {
-  //     createTextMeshes(font);
-  //   }
-  // );
+  // loader.load("../fonts/Baby_Gemoy_Regular.json", function (font) {
+  //   createTextMeshes(font);
+  // });
+  loader.load(
+    "https://threejs.org/examples/fonts/helvetiker_bold.typeface.json",
+    function (font) {
+      createTextMeshes(font);
+    }
+  );
 }
 
 // Create 3D text meshes
