@@ -154,6 +154,22 @@
       margin-top: 5px;
     }
 
+    .loading-indicator {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+      color: #ffffff;
+      font-size: 18px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px 30px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
     @keyframes bounce {
       0%, 20%, 50%, 80%, 100% {
         transform: translateY(0);
@@ -197,7 +213,7 @@
   <canvas id="three-canvas"></canvas>
   
   <div class="scroll-container">
-    <!-- Section 1: S with text on right -->
+    <!-- Section 1: Model with text on right -->
     <div class="content-section right" id="section1">
       <div class="content-text">
         <h2>Skills</h2>
@@ -205,7 +221,7 @@
       </div>
     </div>
 
-    <!-- Section 2: OO with text on left -->
+    <!-- Section 2: Model with text on left -->
     <div class="content-section left" id="section2">
       <div class="content-text">
         <h2>Optimization</h2>
@@ -213,7 +229,7 @@
       </div>
     </div>
 
-    <!-- Section 3: M with text on right -->
+    <!-- Section 3: Model with text on right -->
     <div class="content-section right" id="section3">
       <div class="content-text">
         <h2>Mastery</h2>
@@ -226,12 +242,42 @@
     <div>Scroll to explore</div>
     <div class="scroll-arrow">↓</div>
   </div>
+
+  <div class="loading-indicator" id="loadingIndicator">
+    Loading 3D Model...
+  </div>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script type="module">
+    // Import GLTFLoader as ES6 module
+    import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
+    
+    // Make it available globally
+    window.GLTFLoader = GLTFLoader;
+    
+    // Initialize when GLTFLoader is ready
+    window.addEventListener('load', function() {
+      if (window.GLTFLoader) {
+        initThreeJS();
+      }
+    });
+  </script>
   <script>
     // Wait for page to load completely
     window.addEventListener('load', function() {
-      initThreeJS();
+      // Check if GLTFLoader is available, if not, wait a bit more
+      if (window.GLTFLoader) {
+        initThreeJS();
+      } else {
+        setTimeout(() => {
+          if (window.GLTFLoader) {
+            initThreeJS();
+          } else {
+            console.warn('GLTFLoader not available, using fallback');
+            initThreeJS();
+          }
+        }, 1000);
+      }
     });
 
     function initThreeJS() {
@@ -240,7 +286,8 @@
       const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.setClearColor(0x000000);
+      renderer.setClearColor(0xffffff);
+    //   renderer.setClearColor(0x000000);
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -252,13 +299,15 @@
         0.1,
         1000
       );
-      camera.position.set(0, 0, 60);
+      camera.position.set(0, 0, 80); // Moved camera back for better view
 
       // Lights
       scene.add(new THREE.AmbientLight(0x404040, 0.4));
       const dirLight = new THREE.DirectionalLight(0xffffff, 1);
       dirLight.position.set(50, 50, 50);
       dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 2048;
+      dirLight.shadow.mapSize.height = 2048;
       scene.add(dirLight);
 
       // Extra lights for better 3D effect
@@ -279,11 +328,10 @@
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
       });
 
-      // Character setup
-      const characters = "SOOM".split("");
-      const characterMeshes = [];
-      const characterGroup = new THREE.Group();
-      scene.add(characterGroup);
+      // Model setup
+      const models = [];
+      const modelGroup = new THREE.Group();
+      scene.add(modelGroup);
 
       // Track animation states
       const animationStates = {
@@ -291,128 +339,146 @@
         currentSection: -1
       };
 
-      // Font loader
-      const loader = new THREE.FontLoader();
-      loader.load(
-        "https://threejs.org/examples/fonts/helvetiker_bold.typeface.json",
-        function (font) {
-          console.log("Font loaded successfully");
-          
-          const material = new THREE.MeshPhysicalMaterial({
-            color: 0x888888,
-            metalness: 0.7,
-            roughness: 0.2,
-            clearcoat: 0.8,
-            clearcoatRoughness: 0.2,
-            reflectivity: 0.5,
-          });
-
-          const size = 12;
-          const spacing = 14;
-          let offsetX = -(characters.length - 1) * spacing * 0.5;
-
-          characters.forEach((char, i) => {
-            const geometry = new THREE.TextGeometry(char, {
-              font: font,
-              size: size,
-              height: 5,
-              curveSegments: 32,
-              bevelEnabled: true,
-              bevelThickness: 2,
-              bevelSize: 1.5,
-              bevelOffset: 0,
-              bevelSegments: 10,
-            });
-
-            geometry.computeBoundingBox();
-            geometry.center();
-
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.position.x = offsetX + i * spacing;
-            mesh.position.y = 0;
-            mesh.position.z = 0;
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
+      // Load 3D model
+      function loadModel() {
+        // You can adjust this path to your model file
+        // const modelPath = './models/Animation-SOOM_new.glb';
+        // const modelPath = './models/Animation-SOOM.glb';
+        // const modelPath = './models/Asset5.gltf';
+        // const modelPath = './models/Soom-letters-grouped.gltf';
+        const modelPath = './models/Soom-pink.gltf'; 
+        
+        // Create GLTFLoader
+        const loader = new window.GLTFLoader();
+        
+        // Optional: Add DRACOLoader for compressed models
+        // const dracoLoader = new THREE.DRACOLoader();
+        // dracoLoader.setDecoderPath('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/libs/draco/');
+        // loader.setDRACOLoader(dracoLoader);
+        
+        loader.load(
+          modelPath,
+          function (gltf) {
+            console.log("Model loaded successfully");
             
-            // Store original position
-            mesh.userData = {
-              originalX: offsetX + i * spacing,
-              originalY: 0,
-              originalZ: 0,
-              isAnimating: false,
-              targetX: offsetX + i * spacing,
-              targetY: 0,
-              targetZ: 0
-            };
-
-            characterGroup.add(mesh);
-            characterMeshes.push(mesh);
+            const model = gltf.scene;
             
-            console.log(`Character ${char} created at position:`, mesh.position);
-          });
-          
-          console.log("All characters created:", characterMeshes.length);
-        },
-        function(progress) {
-          console.log("Font loading progress:", progress);
-        },
-        function(error) {
-          console.error("Font loading error:", error);
-          // Fallback: create simple box geometries if font fails
-          createFallbackCharacters();
-        }
-      );
+            // Create instances based on SOOM structure: S, O, O, M
+            // We need 1 for S, 2 for OO, 1 for M = 4 total but positioned differently
+            for (let i = 0; i < 4; i++) {
+              const modelClone = model.clone();
+              
+              // Apply material enhancements
+              modelClone.traverse((child) => {
+                if (child.isMesh) {
+                  child.castShadow = true;
+                  child.receiveShadow = true;
+                  
+                  // Enhance materials
+                  if (child.material) {
+                    child.material.metalness = 0.7;
+                    child.material.roughness = 0.2;
+                    child.material.envMapIntensity = 1;
+                  }
+                }
+              });
+              
+              // Scale and position - single model initially hidden
+              modelClone.scale.setScalar(500);
+              modelClone.position.set(0, 0, 0); // All start at center
+              modelClone.visible = false; // Hide initially
+              
+              // Store original position and animation data
+              modelClone.userData = {
+                originalX: 0,
+                originalY: 0,
+                originalZ: 0,
+                isAnimating: false,
+                targetX: 0,
+                targetY: 0,
+                targetZ: 0,
+                index: i,
+                section: i === 0 ? 'S' : i === 1 || i === 2 ? 'O' : 'M' // S, O, O, M
+              };
+              
+              modelGroup.add(modelClone);
+              models.push(modelClone);
+            }
+            
+            console.log("All model instances created:", models.length);
+            
+            // Hide loading indicator
+            document.getElementById('loadingIndicator').style.display = 'none';
+            
+            // Initial call to handle scroll
+            handleScroll();
+          },
+          function(progress) {
+            console.log("Model loading progress:", (progress.loaded / progress.total * 100) + '%');
+          },
+          function(error) {
+            console.error("Model loading error:", error);
+            
+            // Fallback: create simple geometries if model fails to load
+            createFallbackModels();
+            document.getElementById('loadingIndicator').style.display = 'none';
+          }
+        );
+      }
 
       // Fallback function to create simple geometries
-      function createFallbackCharacters() {
-        console.log("Creating fallback characters");
+      function createFallbackModels() {
+        console.log("Creating fallback models");
         
         const material = new THREE.MeshPhysicalMaterial({
           color: 0x888888,
           metalness: 0.7,
           roughness: 0.2,
+          clearcoat: 0.8,
+          clearcoatRoughness: 0.2,
         });
 
-        const spacing = 14;
-        let offsetX = -(characters.length - 1) * spacing * 0.5;
-
-        characters.forEach((char, i) => {
-          const geometry = new THREE.BoxGeometry(8, 12, 3);
+        for (let i = 0; i < 4; i++) {
+          const geometry = new THREE.BoxGeometry(15, 20, 8); // Larger fallback boxes
           const mesh = new THREE.Mesh(geometry, material);
-          mesh.position.x = offsetX + i * spacing;
-          mesh.position.y = 0;
-          mesh.position.z = 0;
+          
+          mesh.position.set(0, 0, 0); // All start at center
+          mesh.visible = false; // Hide initially
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
           
           mesh.userData = {
-            originalX: offsetX + i * spacing,
+            originalX: 0,
             originalY: 0,
             originalZ: 0,
             isAnimating: false,
-            targetX: offsetX + i * spacing,
+            targetX: 0,
             targetY: 0,
-            targetZ: 0
+            targetZ: 0,
+            index: i,
+            section: i === 0 ? 'S' : i === 1 || i === 2 ? 'O' : 'M'
           };
 
-          characterGroup.add(mesh);
-          characterMeshes.push(mesh);
-        });
+          modelGroup.add(mesh);
+          models.push(mesh);
+        }
       }
 
-      function animateCharacterFromTop(mesh, targetX, targetY, targetZ, duration = 1500) {
-        if (mesh.userData.isAnimating) {
-          mesh.userData.isAnimating = false;
+      function animateModelFromTop(model, targetX, targetY, targetZ, duration = 1500) {
+        if (model.userData.isAnimating) {
+          model.userData.isAnimating = false;
         }
         
-        mesh.userData.isAnimating = true;
-        mesh.userData.targetX = targetX;
-        mesh.userData.targetY = targetY;
-        mesh.userData.targetZ = targetZ;
+        model.userData.isAnimating = true;
+        model.userData.targetX = targetX;
+        model.userData.targetY = targetY;
+        model.userData.targetZ = targetZ;
         
         // Set starting position from top
-        mesh.position.x = targetX;
-        mesh.position.y = 30; // Start from top
-        mesh.position.z = targetZ;
-        mesh.visible = true;
+        model.position.x = targetX;
+        model.position.y = 30; // Start from top
+        model.position.z = targetZ;
+        model.visible = true;
         
         const startTime = Date.now();
         
@@ -424,37 +490,37 @@
           const eased = 1 - Math.pow(1 - progress, 3);
           
           // Animate from top to target position
-          mesh.position.y = 30 + (targetY - 30) * eased;
+          model.position.y = 30 + (targetY - 30) * eased;
           
           // Add rotation during fall
-          mesh.rotation.x = Math.sin(progress * Math.PI) * 0.4;
-          mesh.rotation.z = Math.sin(progress * Math.PI * 2) * 0.1;
+          model.rotation.x = Math.sin(progress * Math.PI) * 0.4;
+          model.rotation.z = Math.sin(progress * Math.PI * 2) * 0.1;
           
-          if (progress < 1 && mesh.userData.isAnimating) {
+          if (progress < 1 && model.userData.isAnimating) {
             requestAnimationFrame(animate);
           } else {
-            mesh.rotation.x = 0;
-            mesh.rotation.z = 0;
-            mesh.userData.isAnimating = false;
+            model.rotation.x = 0;
+            model.rotation.z = 0;
+            model.userData.isAnimating = false;
           }
         };
         
         animate();
       }
 
-      function animateCharacterToTarget(mesh, targetX, targetY, targetZ, duration = 1000) {
-        if (mesh.userData.isAnimating) {
-          mesh.userData.isAnimating = false;
+      function animateModelToTarget(model, targetX, targetY, targetZ, duration = 1000) {
+        if (model.userData.isAnimating) {
+          model.userData.isAnimating = false;
         }
         
-        mesh.userData.isAnimating = true;
-        mesh.userData.targetX = targetX;
-        mesh.userData.targetY = targetY;
-        mesh.userData.targetZ = targetZ;
+        model.userData.isAnimating = true;
+        model.userData.targetX = targetX;
+        model.userData.targetY = targetY;
+        model.userData.targetZ = targetZ;
         
-        const startX = mesh.position.x;
-        const startY = mesh.position.y;
-        const startZ = mesh.position.z;
+        const startX = model.position.x;
+        const startY = model.position.y;
+        const startZ = model.position.z;
         const startTime = Date.now();
         
         const animate = () => {
@@ -464,60 +530,41 @@
           // Smooth easing
           const eased = 1 - Math.pow(1 - progress, 3);
           
-          mesh.position.x = startX + (targetX - startX) * eased;
-          mesh.position.y = startY + (targetY - startY) * eased;
-          mesh.position.z = startZ + (targetZ - startZ) * eased;
+          model.position.x = startX + (targetX - startX) * eased;
+          model.position.y = startY + (targetY - startY) * eased;
+          model.position.z = startZ + (targetZ - startZ) * eased;
           
           // Subtle rotation
-          mesh.rotation.y = Math.sin(progress * Math.PI) * 0.2;
+          model.rotation.y = Math.sin(progress * Math.PI) * 0.2;
           
-          if (progress < 1 && mesh.userData.isAnimating) {
+          if (progress < 1 && model.userData.isAnimating) {
             requestAnimationFrame(animate);
           } else {
-            mesh.rotation.y = 0;
-            mesh.userData.isAnimating = false;
+            model.rotation.y = 0;
+            model.userData.isAnimating = false;
           }
         };
         
         animate();
       }
 
-      function resetToOriginalPositions() {
-        characterMeshes.forEach((mesh) => {
-          mesh.position.x = mesh.userData.originalX;
-          mesh.position.y = mesh.userData.originalY;
-          mesh.position.z = mesh.userData.originalZ;
-          mesh.userData.targetX = mesh.userData.originalX;
-          mesh.userData.targetY = mesh.userData.originalY;
-          mesh.userData.targetZ = mesh.userData.originalZ;
-          mesh.visible = true;
-          mesh.userData.isAnimating = false;
-          mesh.rotation.x = 0;
-          mesh.rotation.z = 0;
-        });
-      }
+      function updateModelVisibility(scrollProgress) {
+        if (models.length === 0) return;
 
-      function updateCharacterVisibility(scrollProgress) {
-        if (characterMeshes.length === 0) return;
-
-        // Show full SOOM initially (first 20% of scroll)
+        // Show single model initially (first 20% of scroll)
         if (scrollProgress <= 0.2) {
           if (!animationStates.showingFull) {
             animationStates.showingFull = true;
             animationStates.currentSection = -1;
             
-            // Reset all characters to original positions smoothly
-            characterMeshes.forEach((mesh, index) => {
-              mesh.visible = true;
-              setTimeout(() => {
-                animateCharacterToTarget(
-                  mesh, 
-                  mesh.userData.originalX, 
-                  mesh.userData.originalY, 
-                  mesh.userData.originalZ, 
-                  800
-                );
-              }, index * 100);
+            // Show only the first model (complete SOOM) at center
+            models.forEach((model, index) => {
+              if (index === 0) {
+                model.visible = true;
+                animateModelToTarget(model, 0, 0, 0, 800);
+              } else {
+                model.visible = false;
+              }
             });
           }
           return;
@@ -532,38 +579,36 @@
         if (currentSection !== animationStates.currentSection && currentSection >= 0 && currentSection < 3) {
           animationStates.currentSection = currentSection;
           
-          // Hide all characters first
-          characterMeshes.forEach(mesh => {
-            mesh.visible = false;
-            mesh.userData.isAnimating = false;
+          // Hide all models first
+          models.forEach(model => {
+            model.visible = false;
+            model.userData.isAnimating = false;
           });
           
-          // Show and animate specific characters for each section
+          // Show models based on section
           if (currentSection === 0) {
-            // S section - animate S from top to left
-            const sMesh = characterMeshes[0];
+            // S section - show single model on left
+            const model = models[0];
             setTimeout(() => {
-              animateCharacterFromTop(sMesh, -25, 0, 10, 1200);
+              animateModelFromTop(model, -35, 0, 5, 1200);
             }, 200);
             
           } else if (currentSection === 1) {
-            // OO section - animate both O's from top to right
-            const o1Mesh = characterMeshes[1];
-            const o2Mesh = characterMeshes[2];
-            
+            // OO section - show TWO models side by side on right
+            const model1 = models[1];
+            const model2 = models[2];
             setTimeout(() => {
-              animateCharacterFromTop(o1Mesh, 15, 0, 10, 1200);
+              animateModelFromTop(model1, 15, 0, 5, 1200);
             }, 200);
-            
             setTimeout(() => {
-              animateCharacterFromTop(o2Mesh, 35, 0, 10, 1200);
+              animateModelFromTop(model2, 45, 0, 5, 1200);
             }, 400);
             
           } else if (currentSection === 2) {
-            // M section - animate M from top to left
-            const mMesh = characterMeshes[3];
+            // M section - show single model on left
+            const model = models[3];
             setTimeout(() => {
-              animateCharacterFromTop(mMesh, -25, 0, 10, 1200);
+              animateModelFromTop(model, -35, 0, 5, 1200);
             }, 200);
           }
         }
@@ -572,7 +617,7 @@
       function updateSectionVisibility(scrollProgress) {
         const sections = document.querySelectorAll('.content-section');
         
-        // Only show text sections after initial SOOM display
+        // Only show text sections after initial model display
         if (scrollProgress <= 0.2) {
           sections.forEach(section => section.classList.remove('visible'));
           return;
@@ -605,7 +650,7 @@
         const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
         const scrollProgress = Math.min(1, Math.max(0, scrollTop / scrollHeight));
         
-        updateCharacterVisibility(scrollProgress);
+        updateModelVisibility(scrollProgress);
         updateSectionVisibility(scrollProgress);
       }
 
@@ -625,28 +670,32 @@
 
         // Mouse interaction
         raycaster.setFromCamera(mouse, camera);
-        const visibleMeshes = characterMeshes.filter(mesh => mesh.visible);
-        const intersects = raycaster.intersectObjects(visibleMeshes);
+        const visibleModels = models.filter(model => model.visible);
+        const intersects = raycaster.intersectObjects(visibleModels, true);
 
         // Reset hover effects
-        characterMeshes.forEach((mesh) => {
-          if (mesh.visible && !mesh.userData.isAnimating) {
-            mesh.rotation.y *= 0.95;
+        models.forEach((model) => {
+          if (model.visible && !model.userData.isAnimating) {
+            model.rotation.y *= 0.95;
           }
         });
 
         if (intersects.length > 0) {
-          const hovered = intersects[0].object;
-          if (!hovered.userData.isAnimating) {
+          let hovered = intersects[0].object;
+          // Find the root model object
+          while (hovered.parent && !models.includes(hovered)) {
+            hovered = hovered.parent;
+          }
+          if (models.includes(hovered) && !hovered.userData.isAnimating) {
             hovered.rotation.y += Math.sin(time * 3) * 0.02;
           }
         }
 
-        // Floating animation for visible characters
-        characterMeshes.forEach((mesh, index) => {
-          if (mesh.visible && !mesh.userData.isAnimating) {
-            const baseY = mesh.userData.targetY;
-            mesh.position.y = baseY + Math.sin(time + index) * 0.5;
+        // Floating animation for visible models
+        models.forEach((model, index) => {
+          if (model.visible && !model.userData.isAnimating) {
+            const baseY = model.userData.targetY;
+            model.position.y = baseY + Math.sin(time + index) * 0.5;
           }
         });
 
@@ -661,8 +710,8 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       });
 
-      // Initial call
-      handleScroll();
+      // Load the model
+      loadModel();
     }
   </script>
 </body>

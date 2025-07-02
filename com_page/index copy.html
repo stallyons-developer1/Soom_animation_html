@@ -80,8 +80,7 @@
       height: 100vh;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
-      padding-right: 8%;
+      padding: 0 8%;
       opacity: 0;
       transform: translateX(100px);
       transition: all 1s ease;
@@ -93,6 +92,14 @@
       opacity: 1;
       transform: translateX(0);
       pointer-events: all;
+    }
+
+    .content-section.left {
+      justify-content: flex-start;
+    }
+
+    .content-section.right {
+      justify-content: flex-end;
     }
 
     .content-text {
@@ -162,7 +169,7 @@
     /* Responsive */
     @media (max-width: 768px) {
       .content-section {
-        justify-content: center;
+        justify-content: center !important;
         padding: 20px;
       }
       
@@ -190,24 +197,24 @@
   <canvas id="three-canvas"></canvas>
   
   <div class="scroll-container">
-    <!-- Section 1: 3D S with text -->
-    <div class="content-section" id="section1">
+    <!-- Section 1: S with text on right -->
+    <div class="content-section right" id="section1">
       <div class="content-text">
         <h2>Skills</h2>
         <p>Welcome to my creative universe. I'm passionate about crafting digital experiences that tell compelling stories and engage audiences on a deeper level.</p>
       </div>
     </div>
 
-    <!-- Section 2: 3D OO with text -->
-    <div class="content-section" id="section2">
+    <!-- Section 2: OO with text on left -->
+    <div class="content-section left" id="section2">
       <div class="content-text">
         <h2>Optimization</h2>
         <p>Every pixel matters, every frame counts. I focus on creating seamless, fast-loading experiences that captivate users from the first interaction.</p>
       </div>
     </div>
 
-    <!-- Section 3: 3D M with text -->
-    <div class="content-section" id="section3">
+    <!-- Section 3: M with text on right -->
+    <div class="content-section right" id="section3">
       <div class="content-text">
         <h2>Mastery</h2>
         <p>Continuous learning and pushing boundaries to create cutting-edge solutions that stand out in the digital landscape.</p>
@@ -272,6 +279,20 @@
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
       });
 
+
+//       const TextureLoader = new THREE.TextureLoader();
+// const texture = TextureLoader.load( './images/3dTexture.webp' );
+// texture.colorSpace = THREE.SRGBColorSpace;
+ 
+// const material = new THREE.MeshBasicMaterial({
+//   map: texture,
+// });
+
+// // const cube = new THREE.Mesh(geometry, material);
+//   scene.add(material);
+
+
+
       // Character setup
       const characters = "SOOM".split("");
       const characterMeshes = [];
@@ -284,14 +305,22 @@
         currentSection: -1
       };
 
+
+      const textureLoader = new THREE.TextureLoader();
+const texture = textureLoader.load('./images/3dTexture.webp');
+texture.colorSpace = THREE.SRGBColorSpace;
+
+
+    //   https://threejs.org/examples/fonts/helvetiker_bold.typeface.json
       // Font loader
       const loader = new THREE.FontLoader();
       loader.load(
-        "https://threejs.org/examples/fonts/helvetiker_bold.typeface.json",
+        "./fonts/Baby_Gemoy_Regular.json",
         function (font) {
           console.log("Font loaded successfully");
           
           const material = new THREE.MeshPhysicalMaterial({
+             map: texture,
             color: 0x888888,
             metalness: 0.7,
             roughness: 0.2,
@@ -332,7 +361,10 @@
               originalX: offsetX + i * spacing,
               originalY: 0,
               originalZ: 0,
-              isAnimating: false
+              isAnimating: false,
+              targetX: offsetX + i * spacing,
+              targetY: 0,
+              targetZ: 0
             };
 
             characterGroup.add(mesh);
@@ -377,7 +409,10 @@
             originalX: offsetX + i * spacing,
             originalY: 0,
             originalZ: 0,
-            isAnimating: false
+            isAnimating: false,
+            targetX: offsetX + i * spacing,
+            targetY: 0,
+            targetZ: 0
           };
 
           characterGroup.add(mesh);
@@ -385,16 +420,17 @@
         });
       }
 
-      // Scroll handling
-      const sections = document.querySelectorAll('.content-section');
-      const scrollIndicator = document.getElementById('scrollIndicator');
-
-      function animateCharacterFromTop(mesh, targetX, targetY, targetZ, duration = 1200) {
-        if (mesh.userData.isAnimating) return;
+      function animateCharacterFromTop(mesh, targetX, targetY, targetZ, duration = 1500) {
+        if (mesh.userData.isAnimating) {
+          mesh.userData.isAnimating = false;
+        }
         
         mesh.userData.isAnimating = true;
+        mesh.userData.targetX = targetX;
+        mesh.userData.targetY = targetY;
+        mesh.userData.targetZ = targetZ;
         
-        // Set starting position (from top)
+        // Set starting position from top
         mesh.position.x = targetX;
         mesh.position.y = 30; // Start from top
         mesh.position.z = targetZ;
@@ -406,19 +442,61 @@
           const elapsed = Date.now() - startTime;
           const progress = Math.min(elapsed / duration, 1);
           
-          // Easing function for smooth animation
+          // Smooth easing
           const eased = 1 - Math.pow(1 - progress, 3);
           
           // Animate from top to target position
           mesh.position.y = 30 + (targetY - 30) * eased;
           
-          // Add rotation during animation
-          mesh.rotation.x = Math.sin(progress * Math.PI) * 0.3;
+          // Add rotation during fall
+          mesh.rotation.x = Math.sin(progress * Math.PI) * 0.4;
+          mesh.rotation.z = Math.sin(progress * Math.PI * 2) * 0.1;
           
-          if (progress < 1) {
+          if (progress < 1 && mesh.userData.isAnimating) {
             requestAnimationFrame(animate);
           } else {
             mesh.rotation.x = 0;
+            mesh.rotation.z = 0;
+            mesh.userData.isAnimating = false;
+          }
+        };
+        
+        animate();
+      }
+
+      function animateCharacterToTarget(mesh, targetX, targetY, targetZ, duration = 1000) {
+        if (mesh.userData.isAnimating) {
+          mesh.userData.isAnimating = false;
+        }
+        
+        mesh.userData.isAnimating = true;
+        mesh.userData.targetX = targetX;
+        mesh.userData.targetY = targetY;
+        mesh.userData.targetZ = targetZ;
+        
+        const startX = mesh.position.x;
+        const startY = mesh.position.y;
+        const startZ = mesh.position.z;
+        const startTime = Date.now();
+        
+        const animate = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          
+          // Smooth easing
+          const eased = 1 - Math.pow(1 - progress, 3);
+          
+          mesh.position.x = startX + (targetX - startX) * eased;
+          mesh.position.y = startY + (targetY - startY) * eased;
+          mesh.position.z = startZ + (targetZ - startZ) * eased;
+          
+          // Subtle rotation
+          mesh.rotation.y = Math.sin(progress * Math.PI) * 0.2;
+          
+          if (progress < 1 && mesh.userData.isAnimating) {
+            requestAnimationFrame(animate);
+          } else {
+            mesh.rotation.y = 0;
             mesh.userData.isAnimating = false;
           }
         };
@@ -431,8 +509,13 @@
           mesh.position.x = mesh.userData.originalX;
           mesh.position.y = mesh.userData.originalY;
           mesh.position.z = mesh.userData.originalZ;
+          mesh.userData.targetX = mesh.userData.originalX;
+          mesh.userData.targetY = mesh.userData.originalY;
+          mesh.userData.targetZ = mesh.userData.originalZ;
           mesh.visible = true;
           mesh.userData.isAnimating = false;
+          mesh.rotation.x = 0;
+          mesh.rotation.z = 0;
         });
       }
 
@@ -444,18 +527,31 @@
           if (!animationStates.showingFull) {
             animationStates.showingFull = true;
             animationStates.currentSection = -1;
-            resetToOriginalPositions();
+            
+            // Reset all characters to original positions smoothly
+            characterMeshes.forEach((mesh, index) => {
+              mesh.visible = true;
+              setTimeout(() => {
+                animateCharacterToTarget(
+                  mesh, 
+                  mesh.userData.originalX, 
+                  mesh.userData.originalY, 
+                  mesh.userData.originalZ, 
+                  800
+                );
+              }, index * 100);
+            });
           }
           return;
         }
 
         animationStates.showingFull = false;
         
-        // Calculate which section we're in (remaining 80% of scroll divided into 3 sections)
+        // Calculate which section we're in
         const sectionProgress = (scrollProgress - 0.2) / 0.8;
         const currentSection = Math.floor(sectionProgress * 3);
         
-        if (currentSection !== animationStates.currentSection) {
+        if (currentSection !== animationStates.currentSection && currentSection >= 0 && currentSection < 3) {
           animationStates.currentSection = currentSection;
           
           // Hide all characters first
@@ -464,34 +560,40 @@
             mesh.userData.isAnimating = false;
           });
           
-          // Show and animate specific characters based on section
+          // Show and animate specific characters for each section
           if (currentSection === 0) {
-            // Show only S - animate from top to left side
+            // S section - animate S from top to left
             const sMesh = characterMeshes[0];
-            animateCharacterFromTop(sMesh, -25, 0, 10);
+            setTimeout(() => {
+              animateCharacterFromTop(sMesh, -25, 0, 10, 1200);
+            }, 200);
             
           } else if (currentSection === 1) {
-            // Show only OO - animate from top to left side
+            // OO section - animate both O's from top to right
             const o1Mesh = characterMeshes[1];
             const o2Mesh = characterMeshes[2];
             
             setTimeout(() => {
-              animateCharacterFromTop(o1Mesh, -35, 0, 10);
-            }, 100);
+              animateCharacterFromTop(o1Mesh, 15, 0, 10, 1200);
+            }, 200);
             
             setTimeout(() => {
-              animateCharacterFromTop(o2Mesh, -15, 0, 10);
-            }, 300);
+              animateCharacterFromTop(o2Mesh, 35, 0, 10, 1200);
+            }, 400);
             
           } else if (currentSection === 2) {
-            // Show only M - animate from top to left side
+            // M section - animate M from top to left
             const mMesh = characterMeshes[3];
-            animateCharacterFromTop(mMesh, -25, 0, 10);
+            setTimeout(() => {
+              animateCharacterFromTop(mMesh, -25, 0, 10, 1200);
+            }, 200);
           }
         }
       }
 
       function updateSectionVisibility(scrollProgress) {
+        const sections = document.querySelectorAll('.content-section');
+        
         // Only show text sections after initial SOOM display
         if (scrollProgress <= 0.2) {
           sections.forEach(section => section.classList.remove('visible'));
@@ -512,6 +614,7 @@
         });
 
         // Hide scroll indicator after first scroll
+        const scrollIndicator = document.getElementById('scrollIndicator');
         if (scrollProgress > 0.1) {
           scrollIndicator.classList.add('hidden');
         } else {
@@ -549,22 +652,22 @@
 
         // Reset hover effects
         characterMeshes.forEach((mesh) => {
-          if (mesh.visible) {
+          if (mesh.visible && !mesh.userData.isAnimating) {
             mesh.rotation.y *= 0.95;
-            mesh.rotation.x *= 0.95;
           }
         });
 
         if (intersects.length > 0) {
           const hovered = intersects[0].object;
-          hovered.rotation.y += Math.sin(time * 3) * 0.02;
-          hovered.rotation.x += Math.cos(time * 3) * 0.01;
+          if (!hovered.userData.isAnimating) {
+            hovered.rotation.y += Math.sin(time * 3) * 0.02;
+          }
         }
 
         // Floating animation for visible characters
         characterMeshes.forEach((mesh, index) => {
           if (mesh.visible && !mesh.userData.isAnimating) {
-            const baseY = mesh.userData.originalY;
+            const baseY = mesh.userData.targetY;
             mesh.position.y = baseY + Math.sin(time + index) * 0.5;
           }
         });
