@@ -1,34 +1,669 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOOM - 3D Text</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SOOM 3D</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        body {
-            font-family: Arial, sans-serif;
-            background: #ffffff;
-            overflow: hidden;
-        }
+    body {
+      font-family: 'Arial', sans-serif;
+      overflow-x: hidden;
+      background: #000000;
+      color: #ffffff;
+    }
 
-        #canvas-container {
-            width: 100vw;
-            height: 100vh;
-        }
-    </style>
+    .ui {
+      position: fixed;
+      z-index: 1000;
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      padding: 10px 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .ui:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .top-left {
+      top: 20px;
+      left: 20px;
+    }
+
+    .top-right {
+      top: 20px;
+      right: 20px;
+    }
+
+    .bottom-left {
+      bottom: 20px;
+      left: 20px;
+    }
+
+    .bottom-right {
+      bottom: 20px;
+      right: 20px;
+    }
+
+    #three-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      background: #000000;
+    }
+
+    .scroll-container {
+      position: relative;
+      z-index: 2;
+      height: 400vh; /* 4x viewport height for smooth scrolling */
+    }
+
+    .content-section {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 0 8%;
+      opacity: 0;
+      transform: translateX(100px);
+      transition: all 1s ease;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .content-section.visible {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: all;
+    }
+
+    .content-section.left {
+      justify-content: flex-start;
+    }
+
+    .content-section.right {
+      justify-content: flex-end;
+    }
+
+    .content-text {
+      max-width: 500px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 40px;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .content-text h2 {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      font-weight: 300;
+      color: #ffffff;
+      letter-spacing: 0.02em;
+    }
+
+    .content-text p {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: #cccccc;
+      letter-spacing: 0.01em;
+    }
+
+    .scroll-indicator {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      color: #ffffff;
+      font-size: 12px;
+      text-align: center;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 10px 20px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .scroll-indicator.hidden {
+      opacity: 0;
+    }
+
+    .scroll-arrow {
+      font-size: 20px;
+      animation: bounce 2s infinite;
+      margin-top: 5px;
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+      }
+      40% {
+        transform: translateY(-10px);
+      }
+      60% {
+        transform: translateY(-5px);
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .content-section {
+        justify-content: center !important;
+        padding: 20px;
+      }
+      
+      .content-text {
+        text-align: center;
+        padding: 30px 20px;
+      }
+      
+      .content-text h2 {
+        font-size: 2rem;
+      }
+      
+      .content-text p {
+        font-size: 1rem;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div id="canvas-container"></div>
+  <div class="ui top-left">BIO</div>
+  <div class="ui top-right">PROJECTS</div>
+  <div class="ui bottom-left">AWARDS</div>
+  <div class="ui bottom-right">CONTACT</div>
+  
+  <canvas id="three-canvas"></canvas>
+  
+  <div class="scroll-container">
+    <!-- Section 1: S with text on right -->
+    <div class="content-section right" id="section1">
+      <div class="content-text">
+        <h2>Skills</h2>
+        <p>Welcome to my creative universe. I'm passionate about crafting digital experiences that tell compelling stories and engage audiences on a deeper level.</p>
+      </div>
+    </div>
 
-    <!-- Load Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- Load our custom script -->
-    <script src="script.js"></script>
+    <!-- Section 2: OO with text on left -->
+    <div class="content-section left" id="section2">
+      <div class="content-text">
+        <h2>Optimization</h2>
+        <p>Every pixel matters, every frame counts. I focus on creating seamless, fast-loading experiences that captivate users from the first interaction.</p>
+      </div>
+    </div>
+
+    <!-- Section 3: M with text on right -->
+    <div class="content-section right" id="section3">
+      <div class="content-text">
+        <h2>Mastery</h2>
+        <p>Continuous learning and pushing boundaries to create cutting-edge solutions that stand out in the digital landscape.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-indicator" id="scrollIndicator">
+    <div>Scroll to explore</div>
+    <div class="scroll-arrow">↓</div>
+  </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // Wait for page to load completely
+    window.addEventListener('load', function() {
+      initThreeJS();
+    });
+
+    function initThreeJS() {
+      // Get canvas
+      const canvas = document.getElementById("three-canvas");
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setClearColor(0x000000);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      // Scene and camera
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        50,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      camera.position.set(0, 0, 60);
+
+      // Lights
+      scene.add(new THREE.AmbientLight(0x404040, 0.4));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+      dirLight.position.set(50, 50, 50);
+      dirLight.castShadow = true;
+      scene.add(dirLight);
+
+      // Extra lights for better 3D effect
+      const pointLight1 = new THREE.PointLight(0xff6b6b, 0.5, 100);
+      pointLight1.position.set(-30, 30, 30);
+      scene.add(pointLight1);
+
+      const pointLight2 = new THREE.PointLight(0x6b6bff, 0.5, 100);
+      pointLight2.position.set(30, -30, 30);
+      scene.add(pointLight2);
+
+      // Raycaster and mouse
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+
+      document.addEventListener("mousemove", (event) => {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      });
+
+      // Character setup
+      const characters = "SOOM".split("");
+      const characterMeshes = [];
+      const characterGroup = new THREE.Group();
+      scene.add(characterGroup);
+
+      // Track animation states
+      const animationStates = {
+        showingFull: true,
+        currentSection: -1
+      };
+
+      // Font loader
+      const loader = new THREE.FontLoader();
+      loader.load(
+        "https://threejs.org/examples/fonts/helvetiker_bold.typeface.json",
+        function (font) {
+          console.log("Font loaded successfully");
+          
+          const material = new THREE.MeshPhysicalMaterial({
+            color: 0x888888,
+            metalness: 0.7,
+            roughness: 0.2,
+            clearcoat: 0.8,
+            clearcoatRoughness: 0.2,
+            reflectivity: 0.5,
+          });
+
+          const size = 12;
+          const spacing = 14;
+          let offsetX = -(characters.length - 1) * spacing * 0.5;
+
+          characters.forEach((char, i) => {
+            const geometry = new THREE.TextGeometry(char, {
+              font: font,
+              size: size,
+              height: 5,
+              curveSegments: 32,
+              bevelEnabled: true,
+              bevelThickness: 2,
+              bevelSize: 1.5,
+              bevelOffset: 0,
+              bevelSegments: 10,
+            });
+
+            geometry.computeBoundingBox();
+            geometry.center();
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.x = offsetX + i * spacing;
+            mesh.position.y = 0;
+            mesh.position.z = 0;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            
+            // Store original position
+            mesh.userData = {
+              originalX: offsetX + i * spacing,
+              originalY: 0,
+              originalZ: 0,
+              isAnimating: false,
+              targetX: offsetX + i * spacing,
+              targetY: 0,
+              targetZ: 0
+            };
+
+            characterGroup.add(mesh);
+            characterMeshes.push(mesh);
+            
+            console.log(`Character ${char} created at position:`, mesh.position);
+          });
+          
+          console.log("All characters created:", characterMeshes.length);
+        },
+        function(progress) {
+          console.log("Font loading progress:", progress);
+        },
+        function(error) {
+          console.error("Font loading error:", error);
+          // Fallback: create simple box geometries if font fails
+          createFallbackCharacters();
+        }
+      );
+
+      // Fallback function to create simple geometries
+      function createFallbackCharacters() {
+        console.log("Creating fallback characters");
+        
+        const material = new THREE.MeshPhysicalMaterial({
+          color: 0x888888,
+          metalness: 0.7,
+          roughness: 0.2,
+        });
+
+        const spacing = 14;
+        let offsetX = -(characters.length - 1) * spacing * 0.5;
+
+        characters.forEach((char, i) => {
+          const geometry = new THREE.BoxGeometry(8, 12, 3);
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.position.x = offsetX + i * spacing;
+          mesh.position.y = 0;
+          mesh.position.z = 0;
+          
+          mesh.userData = {
+            originalX: offsetX + i * spacing,
+            originalY: 0,
+            originalZ: 0,
+            isAnimating: false,
+            targetX: offsetX + i * spacing,
+            targetY: 0,
+            targetZ: 0
+          };
+
+          characterGroup.add(mesh);
+          characterMeshes.push(mesh);
+        });
+      }
+
+      function animateCharacterFromTop(mesh, targetX, targetY, targetZ, duration = 1500) {
+        if (mesh.userData.isAnimating) {
+          mesh.userData.isAnimating = false;
+        }
+        
+        mesh.userData.isAnimating = true;
+        mesh.userData.targetX = targetX;
+        mesh.userData.targetY = targetY;
+        mesh.userData.targetZ = targetZ;
+        
+        // Set starting position from top
+        mesh.position.x = targetX;
+        mesh.position.y = 30; // Start from top
+        mesh.position.z = targetZ;
+        mesh.visible = true;
+        
+        const startTime = Date.now();
+        
+        const animate = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          
+          // Smooth easing
+          const eased = 1 - Math.pow(1 - progress, 3);
+          
+          // Animate from top to target position
+          mesh.position.y = 30 + (targetY - 30) * eased;
+          
+          // Add rotation during fall
+          mesh.rotation.x = Math.sin(progress * Math.PI) * 0.4;
+          mesh.rotation.z = Math.sin(progress * Math.PI * 2) * 0.1;
+          
+          if (progress < 1 && mesh.userData.isAnimating) {
+            requestAnimationFrame(animate);
+          } else {
+            mesh.rotation.x = 0;
+            mesh.rotation.z = 0;
+            mesh.userData.isAnimating = false;
+          }
+        };
+        
+        animate();
+      }
+
+      function animateCharacterToTarget(mesh, targetX, targetY, targetZ, duration = 1000) {
+        if (mesh.userData.isAnimating) {
+          mesh.userData.isAnimating = false;
+        }
+        
+        mesh.userData.isAnimating = true;
+        mesh.userData.targetX = targetX;
+        mesh.userData.targetY = targetY;
+        mesh.userData.targetZ = targetZ;
+        
+        const startX = mesh.position.x;
+        const startY = mesh.position.y;
+        const startZ = mesh.position.z;
+        const startTime = Date.now();
+        
+        const animate = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          
+          // Smooth easing
+          const eased = 1 - Math.pow(1 - progress, 3);
+          
+          mesh.position.x = startX + (targetX - startX) * eased;
+          mesh.position.y = startY + (targetY - startY) * eased;
+          mesh.position.z = startZ + (targetZ - startZ) * eased;
+          
+          // Subtle rotation
+          mesh.rotation.y = Math.sin(progress * Math.PI) * 0.2;
+          
+          if (progress < 1 && mesh.userData.isAnimating) {
+            requestAnimationFrame(animate);
+          } else {
+            mesh.rotation.y = 0;
+            mesh.userData.isAnimating = false;
+          }
+        };
+        
+        animate();
+      }
+
+      function resetToOriginalPositions() {
+        characterMeshes.forEach((mesh) => {
+          mesh.position.x = mesh.userData.originalX;
+          mesh.position.y = mesh.userData.originalY;
+          mesh.position.z = mesh.userData.originalZ;
+          mesh.userData.targetX = mesh.userData.originalX;
+          mesh.userData.targetY = mesh.userData.originalY;
+          mesh.userData.targetZ = mesh.userData.originalZ;
+          mesh.visible = true;
+          mesh.userData.isAnimating = false;
+          mesh.rotation.x = 0;
+          mesh.rotation.z = 0;
+        });
+      }
+
+      function updateCharacterVisibility(scrollProgress) {
+        if (characterMeshes.length === 0) return;
+
+        // Show full SOOM initially (first 20% of scroll)
+        if (scrollProgress <= 0.2) {
+          if (!animationStates.showingFull) {
+            animationStates.showingFull = true;
+            animationStates.currentSection = -1;
+            
+            // Reset all characters to original positions smoothly
+            characterMeshes.forEach((mesh, index) => {
+              mesh.visible = true;
+              setTimeout(() => {
+                animateCharacterToTarget(
+                  mesh, 
+                  mesh.userData.originalX, 
+                  mesh.userData.originalY, 
+                  mesh.userData.originalZ, 
+                  800
+                );
+              }, index * 100);
+            });
+          }
+          return;
+        }
+
+        animationStates.showingFull = false;
+        
+        // Calculate which section we're in
+        const sectionProgress = (scrollProgress - 0.2) / 0.8;
+        const currentSection = Math.floor(sectionProgress * 3);
+        
+        if (currentSection !== animationStates.currentSection && currentSection >= 0 && currentSection < 3) {
+          animationStates.currentSection = currentSection;
+          
+          // Hide all characters first
+          characterMeshes.forEach(mesh => {
+            mesh.visible = false;
+            mesh.userData.isAnimating = false;
+          });
+          
+          // Show and animate specific characters for each section
+          if (currentSection === 0) {
+            // S section - animate S from top to left
+            const sMesh = characterMeshes[0];
+            setTimeout(() => {
+              animateCharacterFromTop(sMesh, -25, 0, 10, 1200);
+            }, 200);
+            
+          } else if (currentSection === 1) {
+            // OO section - animate both O's from top to right
+            const o1Mesh = characterMeshes[1];
+            const o2Mesh = characterMeshes[2];
+            
+            setTimeout(() => {
+              animateCharacterFromTop(o1Mesh, 15, 0, 10, 1200);
+            }, 200);
+            
+            setTimeout(() => {
+              animateCharacterFromTop(o2Mesh, 35, 0, 10, 1200);
+            }, 400);
+            
+          } else if (currentSection === 2) {
+            // M section - animate M from top to left
+            const mMesh = characterMeshes[3];
+            setTimeout(() => {
+              animateCharacterFromTop(mMesh, -25, 0, 10, 1200);
+            }, 200);
+          }
+        }
+      }
+
+      function updateSectionVisibility(scrollProgress) {
+        const sections = document.querySelectorAll('.content-section');
+        
+        // Only show text sections after initial SOOM display
+        if (scrollProgress <= 0.2) {
+          sections.forEach(section => section.classList.remove('visible'));
+          return;
+        }
+        
+        const sectionProgress = (scrollProgress - 0.2) / 0.8;
+        
+        sections.forEach((section, index) => {
+          const sectionStart = index / 3;
+          const sectionEnd = (index + 1) / 3;
+          
+          if (sectionProgress >= sectionStart && sectionProgress < sectionEnd) {
+            section.classList.add('visible');
+          } else {
+            section.classList.remove('visible');
+          }
+        });
+
+        // Hide scroll indicator after first scroll
+        const scrollIndicator = document.getElementById('scrollIndicator');
+        if (scrollProgress > 0.1) {
+          scrollIndicator.classList.add('hidden');
+        } else {
+          scrollIndicator.classList.remove('hidden');
+        }
+      }
+
+      function handleScroll() {
+        const scrollTop = window.pageYOffset;
+        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const scrollProgress = Math.min(1, Math.max(0, scrollTop / scrollHeight));
+        
+        updateCharacterVisibility(scrollProgress);
+        updateSectionVisibility(scrollProgress);
+      }
+
+      window.addEventListener('scroll', handleScroll);
+
+      // Animate
+      function animate() {
+        requestAnimationFrame(animate);
+
+        const time = Date.now() * 0.001;
+
+        // Animate lights
+        pointLight1.position.x = Math.sin(time * 0.5) * 20;
+        pointLight1.position.z = Math.cos(time * 0.5) * 20;
+        pointLight2.position.x = Math.cos(time * 0.7) * 20;
+        pointLight2.position.z = Math.sin(time * 0.7) * 20;
+
+        // Mouse interaction
+        raycaster.setFromCamera(mouse, camera);
+        const visibleMeshes = characterMeshes.filter(mesh => mesh.visible);
+        const intersects = raycaster.intersectObjects(visibleMeshes);
+
+        // Reset hover effects
+        characterMeshes.forEach((mesh) => {
+          if (mesh.visible && !mesh.userData.isAnimating) {
+            mesh.rotation.y *= 0.95;
+          }
+        });
+
+        if (intersects.length > 0) {
+          const hovered = intersects[0].object;
+          if (!hovered.userData.isAnimating) {
+            hovered.rotation.y += Math.sin(time * 3) * 0.02;
+          }
+        }
+
+        // Floating animation for visible characters
+        characterMeshes.forEach((mesh, index) => {
+          if (mesh.visible && !mesh.userData.isAnimating) {
+            const baseY = mesh.userData.targetY;
+            mesh.position.y = baseY + Math.sin(time + index) * 0.5;
+          }
+        });
+
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      // Resize
+      window.addEventListener("resize", () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // Initial call
+      handleScroll();
+    }
+  </script>
 </body>
 </html>
