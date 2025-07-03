@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
   <title>SOOM 3D</title>
   <style>
     * {
@@ -16,6 +16,8 @@
       overflow-x: hidden;
       background: #000000;
       color: #ffffff;
+      -webkit-text-size-adjust: 100%;
+      -webkit-font-smoothing: antialiased;
     }
 
     .ui {
@@ -23,17 +25,19 @@
       z-index: 1000;
       color: #ffffff;
       font-weight: bold;
-      font-size: 14px;
       cursor: pointer;
       transition: all 0.3s ease;
-      padding: 10px 15px;
       background: rgba(255, 255, 255, 0.1);
       border-radius: 20px;
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.2);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      font-size: 14px;
+      padding: 10px 15px;
     }
 
-    .ui:hover {
+    .ui:hover, .ui:active {
       background: rgba(255, 255, 255, 0.2);
       transform: translateY(-2px);
     }
@@ -64,12 +68,13 @@
       left: 0;
       z-index: 1;
       background: #000000;
+      touch-action: none;
     }
 
     .scroll-container {
       position: relative;
       z-index: 2;
-      height: 400vh; /* 4x viewport height for smooth scrolling */
+      height: 400vh;
     }
 
     .content-section {
@@ -142,6 +147,7 @@
       border-radius: 20px;
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.2);
+      user-select: none;
     }
 
     .scroll-indicator.hidden {
@@ -152,22 +158,6 @@
       font-size: 20px;
       animation: bounce 2s infinite;
       margin-top: 5px;
-    }
-
-    .loading-indicator {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 1000;
-      color: #ffffff;
-      font-size: 18px;
-      text-align: center;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 20px 30px;
-      border-radius: 20px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     @keyframes bounce {
@@ -182,24 +172,126 @@
       }
     }
 
-    /* Responsive */
+    /* Mobile Styles - Complete Override */
     @media (max-width: 768px) {
+      .ui {
+        font-size: 11px;
+        padding: 8px 12px;
+        border-radius: 15px;
+      }
+      
+      .top-left, .top-right {
+        top: 10px;
+      }
+      
+      .top-left, .bottom-left {
+        left: 10px;
+      }
+      
+      .top-right, .bottom-right {
+        right: 10px;
+      }
+      
+      .bottom-left, .bottom-right {
+        bottom: 10px;
+      }
+      
+      /* Mobile: Stack character above text */
       .content-section {
+        flex-direction: column !important;
         justify-content: center !important;
-        padding: 20px;
+        align-items: center !important;
+        padding: 20px !important;
+        transform: translateY(50px) !important;
+      }
+      
+      .content-section.visible {
+        transform: translateY(0) !important;
+      }
+      
+      .content-section.left,
+      .content-section.right {
+        justify-content: center !important;
       }
       
       .content-text {
         text-align: center;
-        padding: 30px 20px;
+        padding: 20px 18px;
+        max-width: 90%;
+        margin-top: 80px; /* Space for character above */
+        border-radius: 12px;
       }
       
       .content-text h2 {
-        font-size: 2rem;
+        font-size: 1.6rem;
+        margin-bottom: 15px;
+        line-height: 1.2;
       }
       
       .content-text p {
-        font-size: 1rem;
+        line-height: 1.5;
+        font-size: 0.85rem;
+      }
+      
+      .scroll-indicator {
+        bottom: 15px;
+        font-size: 10px;
+        padding: 8px 15px;
+        border-radius: 15px;
+      }
+      
+      .scroll-arrow {
+        font-size: 16px;
+      }
+      
+      .scroll-container {
+        height: 350vh;
+      }
+    }
+
+    /* Very Small Mobile */
+    @media (max-width: 360px) {
+      .ui {
+        font-size: 10px;
+        padding: 6px 10px;
+      }
+      
+      .content-text {
+        padding: 18px 15px;
+        max-width: 95%;
+      }
+      
+      .content-text h2 {
+        font-size: 1.4rem;
+        margin-bottom: 12px;
+      }
+      
+      .content-text p {
+        font-size: 0.8rem;
+      }
+    }
+
+    /* Landscape Mobile */
+    @media (max-width: 768px) and (orientation: landscape) and (max-height: 500px) {
+      .content-section {
+        flex-direction: row !important;
+        padding: 0 3% !important;
+      }
+      
+      .content-text {
+        padding: 15px 20px;
+        max-width: 60%;
+        margin-top: 0;
+      }
+      
+      .content-text h2 {
+        font-size: 1.4rem;
+        margin-bottom: 10px;
+      }
+      
+      .content-text p {
+        font-size: 0.8rem;
+        line-height: 1.4;
       }
     }
   </style>
@@ -213,7 +305,7 @@
   <canvas id="three-canvas"></canvas>
   
   <div class="scroll-container">
-    <!-- Section 1: Model with text on right -->
+    <!-- Section 1: S with text -->
     <div class="content-section right" id="section1">
       <div class="content-text">
         <h2>Skills</h2>
@@ -221,7 +313,7 @@
       </div>
     </div>
 
-    <!-- Section 2: Model with text on left -->
+    <!-- Section 2: OO with text -->
     <div class="content-section left" id="section2">
       <div class="content-text">
         <h2>Optimization</h2>
@@ -229,7 +321,7 @@
       </div>
     </div>
 
-    <!-- Section 3: Model with text on right -->
+    <!-- Section 3: M with text -->
     <div class="content-section right" id="section3">
       <div class="content-text">
         <h2>Mastery</h2>
@@ -242,329 +334,534 @@
     <div>Scroll to explore</div>
     <div class="scroll-arrow">↓</div>
   </div>
-
-  <div class="loading-indicator" id="loadingIndicator">
-    Loading 3D Model...
-  </div>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script type="module">
-    // Import GLTFLoader as ES6 module
-    import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
-    
-    // Make it available globally
-    window.GLTFLoader = GLTFLoader;
-    
-    // Initialize when GLTFLoader is ready
-    window.addEventListener('load', function() {
-      if (window.GLTFLoader) {
-        initThreeJS();
-      }
-    });
-  </script>
   <script>
-    // Wait for page to load completely
+    // Enhanced mobile detection
+    function isMobile() {
+      const userAgent = navigator.userAgent.toLowerCase();
+      const mobileKeywords = ['android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
+      const isMobileDevice = mobileKeywords.some(keyword => userAgent.includes(keyword));
+      const isSmallScreen = window.innerWidth <= 768;
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      
+      return isMobileDevice || (isSmallScreen && isTouchDevice);
+    }
+
+    let IS_MOBILE = false;
+    let characterMeshes = [];
+    let scene, camera, renderer, characterGroup;
+    let pointLight1, pointLight2;
+    let loadedFont = null;
+    
+    let animationStates = {
+      showingFull: true,
+      currentSection: -1,
+      hasInitialized: false,
+      fontLoaded: false,
+      initialAnimationDone: false
+    };
+
+    function updateDeviceType() {
+      IS_MOBILE = isMobile();
+      console.log('Device type - Mobile:', IS_MOBILE, 'Width:', window.innerWidth);
+    }
+
     window.addEventListener('load', function() {
-      // Check if GLTFLoader is available, if not, wait a bit more
-      if (window.GLTFLoader) {
-        initThreeJS();
-      } else {
-        setTimeout(() => {
-          if (window.GLTFLoader) {
-            initThreeJS();
-          } else {
-            console.warn('GLTFLoader not available, using fallback');
-            initThreeJS();
-          }
-        }, 1000);
-      }
+      updateDeviceType();
+      initThreeJS();
     });
 
     function initThreeJS() {
-      // Get canvas
       const canvas = document.getElementById("three-canvas");
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer = new THREE.WebGLRenderer({ 
+        canvas, 
+        antialias: !IS_MOBILE,
+        powerPreference: IS_MOBILE ? "low-power" : "high-performance"
+      });
+      
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(window.devicePixelRatio);
-    //   renderer.setClearColor(0xffffff);
+      renderer.setPixelRatio(IS_MOBILE ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2));
       renderer.setClearColor(0x000000);
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      
+      if (!IS_MOBILE) {
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      }
 
       // Scene and camera
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(
-        50,
+      scene = new THREE.Scene();
+      
+      const fov = IS_MOBILE ? 65 : 50;
+      const cameraZ = IS_MOBILE ? 80 : 60;
+      
+      camera = new THREE.PerspectiveCamera(
+        fov,
         window.innerWidth / window.innerHeight,
         0.1,
         1000
       );
-      camera.position.set(0, 0, 80); // Moved camera back for better view
+      camera.position.set(0, 0, cameraZ);
 
-      // Lights
-      scene.add(new THREE.AmbientLight(0x404040, 0.4));
-      const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+      // Lighting setup
+      scene.add(new THREE.AmbientLight(0x404040, IS_MOBILE ? 0.6 : 0.4));
+      
+      const dirLight = new THREE.DirectionalLight(0xffffff, IS_MOBILE ? 0.8 : 1);
       dirLight.position.set(50, 50, 50);
-      dirLight.castShadow = true;
-      dirLight.shadow.mapSize.width = 2048;
-      dirLight.shadow.mapSize.height = 2048;
+      if (!IS_MOBILE) {
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+      }
       scene.add(dirLight);
 
-      // Extra lights for better 3D effect
-      const pointLight1 = new THREE.PointLight(0xff6b6b, 0.5, 100);
-      pointLight1.position.set(-30, 30, 30);
-      scene.add(pointLight1);
+      // Point lights for desktop only
+      if (!IS_MOBILE) {
+        pointLight1 = new THREE.PointLight(0xff6b6b, 0.5, 100);
+        pointLight1.position.set(-30, 30, 30);
+        scene.add(pointLight1);
 
-      const pointLight2 = new THREE.PointLight(0x6b6bff, 0.5, 100);
-      pointLight2.position.set(30, -30, 30);
-      scene.add(pointLight2);
+        pointLight2 = new THREE.PointLight(0x6b6bff, 0.5, 100);
+        pointLight2.position.set(30, -30, 30);
+        scene.add(pointLight2);
+      }
 
-      // Raycaster and mouse
+      // Mouse/Touch interaction
       const raycaster = new THREE.Raycaster();
       const mouse = new THREE.Vector2();
 
-      document.addEventListener("mousemove", (event) => {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-      });
+      function updateMousePosition(clientX, clientY) {
+        mouse.x = (clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+      }
 
-      // Model setup
-      const models = [];
-      const modelGroup = new THREE.Group();
-      scene.add(modelGroup);
+      if (!IS_MOBILE) {
+        document.addEventListener("mousemove", (event) => {
+          updateMousePosition(event.clientX, event.clientY);
+        });
+      }
 
-      // Track animation states
-      const animationStates = {
-        showingFull: true,
-        currentSection: -1
-      };
+      // Character setup
+      const characters = "SOOM".split("");
+      characterGroup = new THREE.Group();
+      scene.add(characterGroup);
 
-      // Load 3D model
-      function loadModel() {
-        // You can adjust this path to your model file
-        // const modelPath = './models/Animation-SOOM_new.glb';
-        // const modelPath = './models/Animation-SOOM.glb';
-        // const modelPath = './models/Asset5.gltf';
-        // const modelPath = './models/Soom-letters-grouped.gltf';
-        const modelPath = './models/Soom-pink.gltf'; 
-        
-        // Create GLTFLoader
-        const loader = new window.GLTFLoader();
-        
-        // Optional: Add DRACOLoader for compressed models
-        // const dracoLoader = new THREE.DRACOLoader();
-        // dracoLoader.setDecoderPath('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/libs/draco/');
-        // loader.setDRACOLoader(dracoLoader);
+      // Font loading with multiple fallbacks
+      const loader = new THREE.FontLoader();
+      const fontUrls = [
+        "https://threejs.org/examples/fonts/helvetiker_bold.typeface.json",
+        "https://threejs.org/examples/fonts/helvetiker_regular.typeface.json",
+        "https://threejs.org/examples/fonts/droid/droid_sans_bold.typeface.json"
+      ];
+
+      let currentFontIndex = 0;
+
+      function tryLoadFont() {
+        if (currentFontIndex >= fontUrls.length) {
+          console.log("All font URLs failed, creating fallback characters");
+          createFallbackCharacters();
+          return;
+        }
+
+        console.log(`Trying to load font ${currentFontIndex + 1}/${fontUrls.length}: ${fontUrls[currentFontIndex]}`);
         
         loader.load(
-          modelPath,
-          function (gltf) {
-            console.log("Model loaded successfully");
-            
-            const model = gltf.scene;
-            
-            // Create instances based on SOOM structure: S, O, O, M
-            // We need 1 for S, 2 for OO, 1 for M = 4 total but positioned differently
-            for (let i = 0; i < 4; i++) {
-              const modelClone = model.clone();
-              
-              // Apply material enhancements
-              modelClone.traverse((child) => {
-                if (child.isMesh) {
-                  child.castShadow = true;
-                  child.receiveShadow = true;
-                  
-                  // Enhance materials
-                  if (child.material) {
-                    child.material.metalness = 0.7;
-                    child.material.roughness = 0.2;
-                    child.material.envMapIntensity = 1;
-                  }
-                }
-              });
-              
-              // Scale and position - single model initially hidden
-              modelClone.scale.setScalar(500);
-              modelClone.position.set(0, 0, 0); // All start at center
-              modelClone.visible = false; // Hide initially
-              
-              // Store original position and animation data
-              modelClone.userData = {
-                originalX: 0,
-                originalY: 0,
-                originalZ: 0,
-                isAnimating: false,
-                targetX: 0,
-                targetY: 0,
-                targetZ: 0,
-                index: i,
-                section: i === 0 ? 'S' : i === 1 || i === 2 ? 'O' : 'M' // S, O, O, M
-              };
-              
-              modelGroup.add(modelClone);
-              models.push(modelClone);
-            }
-            
-            console.log("All model instances created:", models.length);
-            
-            // Hide loading indicator
-            document.getElementById('loadingIndicator').style.display = 'none';
-            
-            // Initial call to handle scroll
-            handleScroll();
+          fontUrls[currentFontIndex],
+          function (font) {
+            console.log("Font loaded successfully:", fontUrls[currentFontIndex]);
+            loadedFont = font;
+            animationStates.fontLoaded = true;
+            createCharacters(font);
+            animationStates.hasInitialized = true;
           },
           function(progress) {
-            console.log("Model loading progress:", (progress.loaded / progress.total * 100) + '%');
+            console.log("Font loading progress:", progress);
           },
           function(error) {
-            console.error("Model loading error:", error);
-            
-            // Fallback: create simple geometries if model fails to load
-            createFallbackModels();
-            document.getElementById('loadingIndicator').style.display = 'none';
+            console.error(`Font loading error for ${fontUrls[currentFontIndex]}:`, error);
+            currentFontIndex++;
+            setTimeout(tryLoadFont, 100);
           }
         );
       }
 
-      // Fallback function to create simple geometries
-      function createFallbackModels() {
-        console.log("Creating fallback models");
-        
-        const material = new THREE.MeshPhysicalMaterial({
-          color: 0x888888,
-          metalness: 0.7,
-          roughness: 0.2,
-          clearcoat: 0.8,
-          clearcoatRoughness: 0.2,
-        });
+      // Start font loading
+      tryLoadFont();
 
-        for (let i = 0; i < 4; i++) {
-          const geometry = new THREE.BoxGeometry(15, 20, 8); // Larger fallback boxes
+      function createCharacters(font) {
+        // Texture loading with fallback
+        const textureLoader = new THREE.TextureLoader();
+        let material;
+        
+        // Try to load texture, fallback to solid color if fails
+        const textureUrl = "./images/3dTexture.webp";
+        
+        textureLoader.load(
+          textureUrl,
+          function(texture) {
+            console.log('Texture loaded successfully');
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(2, 2);
+            
+            const texturedMaterial = IS_MOBILE ? 
+              new THREE.MeshLambertMaterial({ 
+                map: texture,
+                color: 0x888888,
+                metalness: 0.3,
+                roughness: 0.4,
+                clearcoat: 0.5,
+                clearcoatRoughness: 0.3,
+              }) :
+              new THREE.MeshPhysicalMaterial({
+                map: texture,
+                color: 0x888888,
+                metalness: 0.3,
+                roughness: 0.4,
+                clearcoat: 0.5,
+                clearcoatRoughness: 0.3,
+              });
+            
+            characterMeshes.forEach(mesh => {
+              mesh.material = texturedMaterial;
+            });
+          },
+          function(progress) {
+            console.log('Texture loading progress:', progress);
+          },
+          function(error) {
+            console.log('Texture failed to load, using solid color:', error);
+          }
+        );
+
+        // Initialize with solid color material
+        material = IS_MOBILE ? 
+         new THREE.MeshPhysicalMaterial({
+            color: 0x888888,
+            metalness: 0.7,
+            roughness: 0.2,
+            clearcoat: 0.8,
+            clearcoatRoughness: 0.2,
+            reflectivity: 0.5,
+          }) :
+          new THREE.MeshPhysicalMaterial({
+            color: 0x888888,
+            metalness: 0.7,
+            roughness: 0.2,
+            clearcoat: 0.8,
+            clearcoatRoughness: 0.2,
+            reflectivity: 0.5,
+          });
+
+        const baseSize = 12;
+        const baseSpacing = 14;
+        const baseHeight = 5;
+        
+        const sizeMultiplier = IS_MOBILE ? 0.7 : 1;
+        
+        const size = baseSize * sizeMultiplier;
+        const spacing = baseSpacing * sizeMultiplier;
+        const height = baseHeight * sizeMultiplier;
+
+        const fontSettings = {
+          font: font,
+          size: size,
+          height: height,
+          curveSegments: 32,
+          bevelEnabled: true,
+          bevelThickness: 2 * sizeMultiplier,
+          bevelSize: 1.5 * sizeMultiplier,
+          bevelOffset: 0,
+          bevelSegments: 10,
+        };
+
+        characters.forEach((char, i) => {
+          const geometry = new THREE.TextGeometry(char, fontSettings);
+          geometry.computeBoundingBox();
+          geometry.center();
+
           const mesh = new THREE.Mesh(geometry, material);
           
-          mesh.position.set(0, 0, 0); // All start at center
-          mesh.visible = false; // Hide initially
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
+          // Calculate final positions for SOOM display
+          const offsetX = -(characters.length - 1) * spacing * 0.5;
+          const finalX = offsetX + i * spacing;
+          const finalY = 0;
+          const finalZ = 0;
+          
+          // Start characters way above the screen, invisible
+          mesh.position.set(finalX, IS_MOBILE ? 60 : 80, finalZ);
+          mesh.visible = false;
           
           mesh.userData = {
-            originalX: 0,
-            originalY: 0,
-            originalZ: 0,
+            originalX: finalX,
+            originalY: finalY,
+            originalZ: finalZ,
             isAnimating: false,
-            targetX: 0,
-            targetY: 0,
-            targetZ: 0,
-            index: i,
-            section: i === 0 ? 'S' : i === 1 || i === 2 ? 'O' : 'M'
+            targetX: finalX,
+            targetY: finalY,
+            targetZ: finalZ,
+            // Mobile random movement data
+            randomMoveX: (Math.random() - 0.5) * 2,
+            randomMoveY: (Math.random() - 0.5) * 2,
+            randomMoveZ: (Math.random() - 0.5) * 1,
+            moveSpeed: 0.4 + Math.random() * 0.6,
+            rotSpeed: 0.2 + Math.random() * 0.3
+          };
+          
+          if (!IS_MOBILE) {
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+          }
+
+          characterGroup.add(mesh);
+          characterMeshes.push(mesh);
+        });
+        
+        console.log(`${characters.length} characters created`);
+        
+        // Start the initial animation immediately
+        animateInitialSOOM();
+      }
+
+      function createFallbackCharacters() {
+        console.log("Creating fallback characters");
+        
+        const textureLoader = new THREE.TextureLoader();
+        let material = new THREE.MeshLambertMaterial({ color: 0x888888 });
+        
+        const characters = "SOOM".split("");
+        const sizeMultiplier = IS_MOBILE ? 0.7 : 1;
+        const width = 8 * sizeMultiplier;
+        const height = 12 * sizeMultiplier;
+        const depth = 3 * sizeMultiplier;
+        const spacing = 14 * sizeMultiplier;
+
+        characters.forEach((char, i) => {
+          const geometry = new THREE.BoxGeometry(width, height, depth);
+          const mesh = new THREE.Mesh(geometry, material);
+          
+          const offsetX = -(characters.length - 1) * spacing * 0.5;
+          const finalX = offsetX + i * spacing;
+          const finalY = 0;
+          const finalZ = 0;
+          
+          mesh.position.set(finalX, IS_MOBILE ? 60 : 80, finalZ);
+          mesh.visible = false;
+          
+          mesh.userData = {
+            originalX: finalX,
+            originalY: finalY,
+            originalZ: finalZ,
+            isAnimating: false,
+            targetX: finalX,
+            targetY: finalY,
+            targetZ: finalZ,
+            randomMoveX: (Math.random() - 0.5) * 2,
+            randomMoveY: (Math.random() - 0.5) * 2,
+            randomMoveZ: (Math.random() - 0.5) * 1,
+            moveSpeed: 0.4 + Math.random() * 0.6,
+            rotSpeed: 0.2 + Math.random() * 0.3
           };
 
-          modelGroup.add(mesh);
-          models.push(mesh);
-        }
+          characterGroup.add(mesh);
+          characterMeshes.push(mesh);
+        });
+        
+        animationStates.hasInitialized = true;
+        animateInitialSOOM();
       }
 
-      function animateModelFromTop(model, targetX, targetY, targetZ, duration = 1500) {
-        if (model.userData.isAnimating) {
-          model.userData.isAnimating = false;
+      // NEW: Animate initial SOOM coming from above
+      function animateInitialSOOM() {
+        console.log("Starting initial SOOM animation from above");
+        
+        characterMeshes.forEach((mesh, index) => {
+          setTimeout(() => {
+            animateCharacterFromTop(
+              mesh, 
+              mesh.userData.originalX, 
+              mesh.userData.originalY, 
+              mesh.userData.originalZ, 
+              1500 + index * 200 // Staggered timing
+            );
+          }, index * 150);
+        });
+        
+        animationStates.initialAnimationDone = true;
+      }
+
+      // Enhanced animation functions
+      function animateCharacterFromTop(mesh, targetX, targetY, targetZ, duration = 1200) {
+        if (mesh.userData.isAnimating) {
+          mesh.userData.isAnimating = false;
         }
         
-        model.userData.isAnimating = true;
-        model.userData.targetX = targetX;
-        model.userData.targetY = targetY;
-        model.userData.targetZ = targetZ;
+        mesh.userData.isAnimating = true;
+        mesh.userData.targetX = targetX;
+        mesh.userData.targetY = targetY;
+        mesh.userData.targetZ = targetZ;
         
-        // Set starting position from top
-        model.position.x = targetX;
-        model.position.y = 30; // Start from top
-        model.position.z = targetZ;
-        model.visible = true;
+        const startY = IS_MOBILE ? 60 : 80;
+        mesh.position.set(targetX, startY, targetZ);
+        mesh.visible = true;
         
         const startTime = Date.now();
         
         const animate = () => {
           const elapsed = Date.now() - startTime;
           const progress = Math.min(elapsed / duration, 1);
-          
-          // Smooth easing
           const eased = 1 - Math.pow(1 - progress, 3);
           
-          // Animate from top to target position
-          model.position.y = 30 + (targetY - 30) * eased;
+          mesh.position.y = startY + (targetY - startY) * eased;
           
-          // Add rotation during fall
-          model.rotation.x = Math.sin(progress * Math.PI) * 0.4;
-          model.rotation.z = Math.sin(progress * Math.PI * 2) * 0.1;
+          const rotationIntensity = IS_MOBILE ? 0.15 : 0.4;
+          mesh.rotation.x = Math.sin(progress * Math.PI) * rotationIntensity;
+          mesh.rotation.z = Math.sin(progress * Math.PI * 2) * 0.1;
           
-          if (progress < 1 && model.userData.isAnimating) {
+          if (progress < 1 && mesh.userData.isAnimating) {
             requestAnimationFrame(animate);
           } else {
-            model.rotation.x = 0;
-            model.rotation.z = 0;
-            model.userData.isAnimating = false;
+            mesh.rotation.x = 0;
+            mesh.rotation.z = 0;
+            mesh.userData.isAnimating = false;
           }
         };
         
         animate();
       }
 
-      function animateModelToTarget(model, targetX, targetY, targetZ, duration = 1000) {
-        if (model.userData.isAnimating) {
-          model.userData.isAnimating = false;
+      // NEW: Animate character from right side
+      function animateCharacterFromRight(mesh, targetX, targetY, targetZ, duration = 1200) {
+        if (mesh.userData.isAnimating) {
+          mesh.userData.isAnimating = false;
         }
         
-        model.userData.isAnimating = true;
-        model.userData.targetX = targetX;
-        model.userData.targetY = targetY;
-        model.userData.targetZ = targetZ;
+        mesh.userData.isAnimating = true;
+        mesh.userData.targetX = targetX;
+        mesh.userData.targetY = targetY;
+        mesh.userData.targetZ = targetZ;
         
-        const startX = model.position.x;
-        const startY = model.position.y;
-        const startZ = model.position.z;
+        const startX = IS_MOBILE ? 60 : 100; // Start from right
+        mesh.position.set(startX, targetY, targetZ);
+        mesh.visible = true;
+        
         const startTime = Date.now();
         
         const animate = () => {
           const elapsed = Date.now() - startTime;
           const progress = Math.min(elapsed / duration, 1);
-          
-          // Smooth easing
           const eased = 1 - Math.pow(1 - progress, 3);
           
-          model.position.x = startX + (targetX - startX) * eased;
-          model.position.y = startY + (targetY - startY) * eased;
-          model.position.z = startZ + (targetZ - startZ) * eased;
+          mesh.position.x = startX + (targetX - startX) * eased;
           
-          // Subtle rotation
-          model.rotation.y = Math.sin(progress * Math.PI) * 0.2;
+          // Side sliding animation with rotation
+          mesh.rotation.y = Math.sin(progress * Math.PI) * 0.3;
+          mesh.rotation.z = Math.sin(progress * Math.PI * 1.5) * 0.1;
           
-          if (progress < 1 && model.userData.isAnimating) {
+          if (progress < 1 && mesh.userData.isAnimating) {
             requestAnimationFrame(animate);
           } else {
-            model.rotation.y = 0;
-            model.userData.isAnimating = false;
+            mesh.rotation.y = 0;
+            mesh.rotation.z = 0;
+            mesh.userData.isAnimating = false;
           }
         };
         
         animate();
       }
 
-      function updateModelVisibility(scrollProgress) {
-        if (models.length === 0) return;
+      // NEW: Animate character from left side
+      function animateCharacterFromLeft(mesh, targetX, targetY, targetZ, duration = 1200) {
+        if (mesh.userData.isAnimating) {
+          mesh.userData.isAnimating = false;
+        }
+        
+        mesh.userData.isAnimating = true;
+        mesh.userData.targetX = targetX;
+        mesh.userData.targetY = targetY;
+        mesh.userData.targetZ = targetZ;
+        
+        const startX = IS_MOBILE ? -60 : -100; // Start from left
+        mesh.position.set(startX, targetY, targetZ);
+        mesh.visible = true;
+        
+        const startTime = Date.now();
+        
+        const animate = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          
+          mesh.position.x = startX + (targetX - startX) * eased;
+          
+          // Side sliding animation with rotation
+          mesh.rotation.y = -Math.sin(progress * Math.PI) * 0.3; // Opposite rotation
+          mesh.rotation.z = -Math.sin(progress * Math.PI * 1.5) * 0.1;
+          
+          if (progress < 1 && mesh.userData.isAnimating) {
+            requestAnimationFrame(animate);
+          } else {
+            mesh.rotation.y = 0;
+            mesh.rotation.z = 0;
+            mesh.userData.isAnimating = false;
+          }
+        };
+        
+        animate();
+      }
 
-        // Show single model initially (first 20% of scroll)
+      function animateCharacterToTarget(mesh, targetX, targetY, targetZ, duration = 1000) {
+        if (mesh.userData.isAnimating) return;
+        
+        mesh.userData.isAnimating = true;
+        mesh.userData.targetX = targetX;
+        mesh.userData.targetY = targetY;
+        mesh.userData.targetZ = targetZ;
+        
+        const startX = mesh.position.x;
+        const startY = mesh.position.y;
+        const startZ = mesh.position.z;
+        const startTime = Date.now();
+        
+        const animate = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          
+          mesh.position.x = startX + (targetX - startX) * eased;
+          mesh.position.y = startY + (targetY - startY) * eased;
+          mesh.position.z = startZ + (targetZ - startZ) * eased;
+          
+          if (progress < 1 && mesh.userData.isAnimating) {
+            requestAnimationFrame(animate);
+          } else {
+            mesh.userData.isAnimating = false;
+          }
+        };
+        
+        animate();
+      }
+
+      function updateCharacterVisibility(scrollProgress) {
+        if (characterMeshes.length === 0 || !animationStates.hasInitialized) return;
+
+        // Show full SOOM initially (first 20% of scroll)
         if (scrollProgress <= 0.2) {
           if (!animationStates.showingFull) {
             animationStates.showingFull = true;
             animationStates.currentSection = -1;
             
-            // Show only the first model (complete SOOM) at center
-            models.forEach((model, index) => {
-              if (index === 0) {
-                model.visible = true;
-                animateModelToTarget(model, 0, 0, 0, 800);
-              } else {
-                model.visible = false;
-              }
+            // Animate characters back to original positions from above
+            characterMeshes.forEach((mesh, index) => {
+              setTimeout(() => {
+                animateCharacterFromTop(
+                  mesh, 
+                  mesh.userData.originalX, 
+                  mesh.userData.originalY, 
+                  mesh.userData.originalZ, 
+                  800
+                );
+              }, index * 100);
             });
           }
           return;
@@ -579,36 +876,78 @@
         if (currentSection !== animationStates.currentSection && currentSection >= 0 && currentSection < 3) {
           animationStates.currentSection = currentSection;
           
-          // Hide all models first
-          models.forEach(model => {
-            model.visible = false;
-            model.userData.isAnimating = false;
-          });
-          
-          // Show models based on section
+          // Show and animate specific characters for each section
           if (currentSection === 0) {
-            // S section - show single model on left
-            const model = models[0];
+            // S section - S moves down from existing SOOM position
+            const sMesh = characterMeshes[0];
+            const targetX = IS_MOBILE ? 0 : -25;
+            const targetY = IS_MOBILE ? 8 : 0;
+            
+            // Hide other characters smoothly
+            characterMeshes.forEach((mesh, index) => {
+              if (index !== 0) { // Not the S
+                mesh.userData.isAnimating = false;
+                setTimeout(() => {
+                  mesh.visible = false;
+                }, index * 50);
+              }
+            });
+            
+            // Move S to new position (down from current position)
             setTimeout(() => {
-              animateModelFromTop(model, -35, 0, 5, 1200);
+              animateCharacterToTarget(sMesh, targetX, targetY, 10, 1000);
             }, 200);
             
           } else if (currentSection === 1) {
-            // OO section - show TWO models side by side on right
-            const model1 = models[1];
-            const model2 = models[2];
-            setTimeout(() => {
-              animateModelFromTop(model1, 15, 0, 5, 1200);
-            }, 200);
-            setTimeout(() => {
-              animateModelFromTop(model2, 45, 0, 5, 1200);
-            }, 400);
+            // OO section - animate both O's from RIGHT side (text is on left)
+            const o1Mesh = characterMeshes[1];
+            const o2Mesh = characterMeshes[2];
+            const targetY = IS_MOBILE ? 8 : 0;
+            
+            // Hide other characters
+            characterMeshes.forEach((mesh, index) => {
+              if (index !== 1 && index !== 2) { // Not the O's
+                mesh.visible = false;
+                mesh.userData.isAnimating = false;
+              }
+            });
+            
+            if (IS_MOBILE) {
+              // Mobile: Center both O's together, coming from right
+              setTimeout(() => {
+                animateCharacterFromRight(o1Mesh, -6, targetY, 10, 1200);
+              }, 200);
+              
+              setTimeout(() => {
+                animateCharacterFromRight(o2Mesh, 6, targetY, 10, 1200);
+              }, 400);
+            } else {
+              // Desktop: Right side positioning, coming from right
+              setTimeout(() => {
+                animateCharacterFromRight(o1Mesh, 15, targetY, 10, 1200);
+              }, 200);
+              
+              setTimeout(() => {
+                animateCharacterFromRight(o2Mesh, 35, targetY, 10, 1200);
+              }, 400);
+            }
             
           } else if (currentSection === 2) {
-            // M section - show single model on left
-            const model = models[3];
+            // M section - animate M from LEFT side (text is on right)
+            const mMesh = characterMeshes[3];
+            const targetX = IS_MOBILE ? 0 : -25;
+            const targetY = IS_MOBILE ? 8 : 0;
+            
+            // Hide other characters
+            characterMeshes.forEach((mesh, index) => {
+              if (index !== 3) { // Not the M
+                mesh.visible = false;
+                mesh.userData.isAnimating = false;
+              }
+            });
+            
             setTimeout(() => {
-              animateModelFromTop(model, -35, 0, 5, 1200);
+              animateCharacterFromLeft(mMesh, targetX, targetY, 10, 1200);
             }, 200);
           }
         }
@@ -617,7 +956,7 @@
       function updateSectionVisibility(scrollProgress) {
         const sections = document.querySelectorAll('.content-section');
         
-        // Only show text sections after initial model display
+        // Only show text sections after initial SOOM display
         if (scrollProgress <= 0.2) {
           sections.forEach(section => section.classList.remove('visible'));
           return;
@@ -650,11 +989,11 @@
         const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
         const scrollProgress = Math.min(1, Math.max(0, scrollTop / scrollHeight));
         
-        updateModelVisibility(scrollProgress);
+        updateCharacterVisibility(scrollProgress);
         updateSectionVisibility(scrollProgress);
       }
 
-      window.addEventListener('scroll', handleScroll);
+      window.addEventListener('scroll', handleScroll, { passive: true });
 
       // Animate
       function animate() {
@@ -662,40 +1001,55 @@
 
         const time = Date.now() * 0.001;
 
-        // Animate lights
-        pointLight1.position.x = Math.sin(time * 0.5) * 20;
-        pointLight1.position.z = Math.cos(time * 0.5) * 20;
-        pointLight2.position.x = Math.cos(time * 0.7) * 20;
-        pointLight2.position.z = Math.sin(time * 0.7) * 20;
+        // Animate lights on desktop only
+        if (!IS_MOBILE && pointLight1 && pointLight2) {
+          pointLight1.position.x = Math.sin(time * 0.5) * 20;
+          pointLight1.position.z = Math.cos(time * 0.5) * 20;
+          pointLight2.position.x = Math.cos(time * 0.7) * 20;
+          pointLight2.position.z = Math.sin(time * 0.7) * 20;
+        }
 
-        // Mouse interaction
-        raycaster.setFromCamera(mouse, camera);
-        const visibleModels = models.filter(model => model.visible);
-        const intersects = raycaster.intersectObjects(visibleModels, true);
+        // Mouse interaction on desktop only
+        if (!IS_MOBILE) {
+          raycaster.setFromCamera(mouse, camera);
+          const visibleMeshes = characterMeshes.filter(mesh => mesh.visible);
+          const intersects = raycaster.intersectObjects(visibleMeshes);
 
-        // Reset hover effects
-        models.forEach((model) => {
-          if (model.visible && !model.userData.isAnimating) {
-            model.rotation.y *= 0.95;
-          }
-        });
+          // Reset hover effects
+          characterMeshes.forEach((mesh) => {
+            if (mesh.visible && !mesh.userData.isAnimating) {
+              mesh.rotation.y *= 0.95;
+            }
+          });
 
-        if (intersects.length > 0) {
-          let hovered = intersects[0].object;
-          // Find the root model object
-          while (hovered.parent && !models.includes(hovered)) {
-            hovered = hovered.parent;
-          }
-          if (models.includes(hovered) && !hovered.userData.isAnimating) {
-            hovered.rotation.y += Math.sin(time * 3) * 0.02;
+          if (intersects.length > 0) {
+            const hovered = intersects[0].object;
+            if (!hovered.userData.isAnimating) {
+              hovered.rotation.y += Math.sin(time * 3) * 0.02;
+            }
           }
         }
 
-        // Floating animation for visible models
-        models.forEach((model, index) => {
-          if (model.visible && !model.userData.isAnimating) {
-            const baseY = model.userData.targetY;
-            model.position.y = baseY + Math.sin(time + index) * 0.5;
+        // Character animations
+        characterMeshes.forEach((mesh, index) => {
+          if (!mesh.visible) return;
+          
+          if (IS_MOBILE && !mesh.userData.isAnimating && animationStates.showingFull) {
+            // Mobile: Random floating movement when showing full SOOM
+            const userData = mesh.userData;
+            
+            mesh.position.x += Math.sin(time * userData.moveSpeed + index) * userData.randomMoveX * 0.02;
+            mesh.position.y += Math.cos(time * userData.moveSpeed + index * 0.7) * userData.randomMoveY * 0.015;
+            mesh.position.z += Math.sin(time * userData.moveSpeed * 0.5 + index) * userData.randomMoveZ * 0.01;
+            
+            mesh.rotation.y = Math.sin(time * userData.rotSpeed + index) * 0.1;
+            mesh.rotation.x = Math.cos(time * userData.rotSpeed * 0.7 + index) * 0.05;
+            
+          } else if (!mesh.userData.isAnimating) {
+            // Floating animation for visible characters
+            const baseY = mesh.userData.targetY;
+            const floatIntensity = IS_MOBILE ? 0.3 : 0.5;
+            mesh.position.y = baseY + Math.sin(time + index) * floatIntensity;
           }
         });
 
@@ -705,13 +1059,19 @@
 
       // Resize
       window.addEventListener("resize", () => {
+        updateDeviceType();
+        
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        camera.fov = IS_MOBILE ? 65 : 50;
+        camera.position.z = IS_MOBILE ? 80 : 60;
+        camera.updateProjectionMatrix();
       });
 
-      // Load the model
-      loadModel();
+      // Initial call
+      setTimeout(handleScroll, 200);
     }
   </script>
 </body>
