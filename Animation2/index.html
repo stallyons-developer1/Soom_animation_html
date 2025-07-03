@@ -1,317 +1,259 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Holographic Bubble Animation</title>
+  <head>
+    <meta charset="UTF-8" />
+    <title>3D Wrapped Carousel Around Sphere</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: scroll;
+        background: radial-gradient(circle, #eee6ff, #ccc2ee);
+        font-family: sans-serif;
+      }
 
-        body {
-            background: linear-gradient(135deg, #e8e4f0 0%, #d6c9e3 50%, #c9b8e0 100%);
-            font-family: 'Arial', sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+      canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 0;
+      }
 
-        #threejs-container {
-            width: 100vw;
-            height: 100vh;
-            cursor: pointer;
-        }
+      .orbit-wrapper {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        perspective: 1500px;
+        width: 0;
+        height: 0;
+        z-index: 5;
+        pointer-events: none;
+      }
 
-        .info {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(0, 0, 0, 0.6);
-            font-size: 14px;
-            text-align: center;
-        }
+      .orbit {
+        transform-style: preserve-3d;
+        pointer-events: none;
+        transition: transform 0.1s linear;
+      }
+
+      .orbit-card {
+        position: absolute;
+        width: 320px;
+        height: 200px;
+        transform-style: preserve-3d;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        padding: 10px;
+        text-align: center;
+        pointer-events: auto;
+        opacity: 1;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+
+      .orbit-card img {
+        width: 100%;
+        height: 140px;
+        object-fit: cover;
+        border-radius: 8px;
+      }
+
+      .orbit-card p {
+        margin: 6px 0 0;
+        font-weight: bold;
+      }
+
+      .orbit-card.behind {
+        opacity: 0.1;
+        display: none;
+      }
+
+      .info {
+        position: fixed;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 14px;
+        color: #444;
+        z-index: 10;
+      }
     </style>
-</head>
-<body>
-    <div id="threejs-container"></div>
-    <div class="info">Move your mouse to interact with the holographic bubble</div>
+  </head>
+  <body>
+    <div class="info">Scroll to rotate projects around the jelly sphere</div>
+    <div class="orbit-wrapper">
+      <div class="orbit" id="orbit"></div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        let scene, camera, renderer, sphere;
-        let mouseX = 0, mouseY = 0;
-        let targetMouseX = 0, targetMouseY = 0;
+      let scene, camera, renderer, sphere;
+      const loader = new THREE.TextureLoader();
+      const tex1 = "./images/texture.png";
+      const tex2 = "./images/fold.webp";
+      const tex3 = "./images/texture2.jpeg";
 
-        function initThreeJS() {
-            // Scene setup
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setClearColor(0x000000, 0);
-            document.getElementById('threejs-container').appendChild(renderer.domElement);
+      loader.load(tex1, (texture1) => {
+        loader.load(tex2, (texture2) => {
+          loader.load(tex3, (texture3) => {
+            texture1.wrapS = texture1.wrapT = THREE.RepeatWrapping;
+            texture2.wrapS = texture2.wrapT = THREE.RepeatWrapping;
+            texture3.wrapS = texture3.wrapT = THREE.RepeatWrapping;
+            init(texture1, texture2, texture3);
+            animate();
+          });
+        });
+      });
 
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
-            scene.add(ambientLight);
-            
-            const pointLight1 = new THREE.PointLight(0x00ccff, 2, 100);
-            pointLight1.position.set(20, 20, 20);
-            scene.add(pointLight1);
-            
-            const pointLight2 = new THREE.PointLight(0xff0096, 2, 100);
-            pointLight2.position.set(-20, 20, 20);
-            scene.add(pointLight2);
-            
-            const pointLight3 = new THREE.PointLight(0x8a2be2, 1.5, 100);
-            pointLight3.position.set(0, -20, 20);
-            scene.add(pointLight3);
+      function init(texture1, texture2, texture3) {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(
+          60,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          100
+        );
+        camera.position.z = 10;
 
-            // Create holographic sphere
-            createHolographicSphere();
-            
-            // Position camera
-            camera.position.set(0, 0, 15);
-            camera.lookAt(0, 0, 0);
-        }
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-        function createHolographicSphere() {
-            // High detail geometry for smooth distortions
-            const geometry = new THREE.SphereGeometry(5, 256, 256);
-            
-            const material = new THREE.ShaderMaterial({
-                uniforms: {
-                    time: { value: 0 },
-                    mouseX: { value: 0 },
-                    mouseY: { value: 0 },
-                    colorA: { value: new THREE.Color(0x00ccff) },
-                    colorB: { value: new THREE.Color(0xff0096) },
-                    colorC: { value: new THREE.Color(0x8a2be2) },
-                    colorD: { value: new THREE.Color(0x40e0d0) },
-                    noiseScale: { value: 1.2 },
-                    distortionStrength: { value: 0.3 },
-                    flowSpeed: { value: 1.0 },
-                    smoothness: { value: 2.0 }
-                },
-                vertexShader: `
-                    varying vec2 vUv;
-                    varying vec3 vPosition;
-                    varying vec3 vNormal;
-                    varying vec3 vWorldPosition;
-                    uniform float time;
-                    uniform float mouseX;
-                    uniform float mouseY;
-                    uniform float noiseScale;
-                    uniform float distortionStrength;
-                    
-                    // Enhanced noise function
-                    vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-                    vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-                    vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
-                    vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
-                    
-                    float snoise(vec3 v) {
-                        const vec2 C = vec2(1.0/6.0, 1.0/3.0);
-                        const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-                        vec3 i = floor(v + dot(v, C.yyy));
-                        vec3 x0 = v - i + dot(i, C.xxx);
-                        vec3 g = step(x0.yzx, x0.xyz);
-                        vec3 l = 1.0 - g;
-                        vec3 i1 = min(g.xyz, l.zxy);
-                        vec3 i2 = max(g.xyz, l.zxy);
-                        vec3 x1 = x0 - i1 + C.xxx;
-                        vec3 x2 = x0 - i2 + C.yyy;
-                        vec3 x3 = x0 - D.yyy;
-                        i = mod289(i);
-                        vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-                        float n_ = 0.142857142857;
-                        vec3 ns = n_ * D.wyz - D.xzx;
-                        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-                        vec4 x_ = floor(j * ns.z);
-                        vec4 y_ = floor(j - 7.0 * x_);
-                        vec4 x = x_ *ns.x + ns.yyyy;
-                        vec4 y = y_ *ns.x + ns.yyyy;
-                        vec4 h = 1.0 - abs(x) - abs(y);
-                        vec4 b0 = vec4(x.xy, y.xy);
-                        vec4 b1 = vec4(x.zw, y.zw);
-                        vec4 s0 = floor(b0)*2.0 + 1.0;
-                        vec4 s1 = floor(b1)*2.0 + 1.0;
-                        vec4 sh = -step(h, vec4(0.0));
-                        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-                        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-                        vec3 p0 = vec3(a0.xy, h.x);
-                        vec3 p1 = vec3(a0.zw, h.y);
-                        vec3 p2 = vec3(a1.xy, h.z);
-                        vec3 p3 = vec3(a1.zw, h.w);
-                        vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
-                        p0 *= norm.x;
-                        p1 *= norm.y;
-                        p2 *= norm.z;
-                        p3 *= norm.w;
-                        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-                        m = m * m;
-                        return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
-                    }
-                    
-                    void main() {
-                        vUv = uv;
-                        vNormal = normal;
-                        
-                        vec3 pos = position;
-                        
-                        // Smoother, more organic noise layers
-                        float time1 = time * 0.2;
-                        float time2 = time * 0.15;
-                        float time3 = time * 0.25;
-                        
-                        float noise1 = snoise(pos * noiseScale + time1) * distortionStrength;
-                        float noise2 = snoise(pos * noiseScale * 1.5 + time2) * distortionStrength * 0.6;
-                        float noise3 = snoise(pos * noiseScale * 0.8 + time3) * distortionStrength * 0.4;
-                        
-                        // Gentle mouse interaction
-                        vec3 mouseInfluence = vec3(mouseX * 0.3, mouseY * 0.3, 0.0);
-                        float mouseNoise = snoise(pos + mouseInfluence + time * 0.1) * 0.2;
-                        
-                        // Smooth combination of distortions
-                        float totalNoise = (noise1 + noise2 + noise3 + mouseNoise) * 0.8;
-                        pos += normal * totalNoise;
-                        
-                        // Gentle flowing motion - no rotation, just smooth waves
-                        pos.x += sin(pos.y * 1.5 + time * 0.3) * 0.08;
-                        pos.y += cos(pos.z * 1.2 + time * 0.25) * 0.06;
-                        pos.z += sin(pos.x * 0.8 + time * 0.2) * 0.04;
-                        
-                        vPosition = pos;
-                        vWorldPosition = (modelMatrix * vec4(pos, 1.0)).xyz;
-                        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-                    }
-                `,
-                fragmentShader: `
-                    uniform float time;
-                    uniform float mouseX;
-                    uniform float mouseY;
-                    uniform vec3 colorA;
-                    uniform vec3 colorB;
-                    uniform vec3 colorC;
-                    uniform vec3 colorD;
-                    varying vec2 vUv;
-                    varying vec3 vPosition;
-                    varying vec3 vNormal;
-                    varying vec3 vWorldPosition;
-                    
-                    void main() {
-                        // Smoother wave patterns for color mixing
-                        float wave1 = sin(vPosition.x * 2.0 + time * 1.2) * 0.5 + 0.5;
-                        float wave2 = sin(vPosition.y * 1.8 + time * 1.0) * 0.5 + 0.5;
-                        float wave3 = sin(vPosition.z * 2.5 + time * 1.5) * 0.5 + 0.5;
-                        float wave4 = sin(length(vPosition) * 1.0 + time * 0.8) * 0.5 + 0.5;
-                        
-                        // Gentle mouse influence on colors
-                        float mouseInfluence = sin(mouseX * 5.0 + mouseY * 5.0 + time * 0.5) * 0.5 + 0.5;
-                        
-                        // Smooth color mixing
-                        vec3 color1 = mix(colorA, colorB, smoothstep(0.0, 1.0, wave1));
-                        vec3 color2 = mix(colorC, colorD, smoothstep(0.0, 1.0, wave2));
-                        vec3 color = mix(color1, color2, smoothstep(0.0, 1.0, wave3 * wave4));
-                        
-                        // Subtle mouse interaction to colors
-                        color = mix(color, colorB, mouseInfluence * 0.2);
-                        
-                        // Enhanced fresnel effect for super smooth edges
-                        vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
-                        float fresnel = 1.0 - abs(dot(viewDirection, vNormal));
-                        fresnel = pow(fresnel, 1.5);
-                        fresnel = smoothstep(0.0, 1.0, fresnel);
-                        
-                        // Smooth iridescent highlights
-                        vec3 iridescent = vec3(0.4, 0.7, 1.0) * fresnel;
-                        color += iridescent * 0.3;
-                        
-                        // Gentle rim lighting for smooth edges
-                        float rim = 1.0 - dot(viewDirection, vNormal);
-                        rim = pow(rim, 2.0);
-                        rim = smoothstep(0.0, 1.0, rim);
-                        vec3 rimColor = mix(colorA, colorC, sin(time * 1.0) * 0.5 + 0.5);
-                        color += rimColor * rim * 0.4;
-                        
-                        // Super smooth transparency with soft edges
-                        float alpha = 0.75 + wave1 * 0.15 + fresnel * 0.2;
-                        alpha = mix(alpha, 0.85, mouseInfluence * 0.1);
-                        alpha = smoothstep(0.0, 1.0, alpha);
-                        
-                        // Very subtle color variations
-                        color += vec3(
-                            sin(vPosition.x + time * 0.3) * 0.05,
-                            cos(vPosition.y + time * 0.4) * 0.05,
-                            sin(vPosition.z + time * 0.2) * 0.05
-                        );
-                        
-                        gl_FragColor = vec4(color, alpha);
-                    }
-                `,
-                transparent: true,
-                side: THREE.DoubleSide
-            });
-
-            sphere = new THREE.Mesh(geometry, material);
-            scene.add(sphere);
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            // Smooth mouse interpolation
-            mouseX += (targetMouseX - mouseX) * 0.05;
-            mouseY += (targetMouseY - mouseY) * 0.05;
-            
-            if (sphere) {
-                // NO rotation - just smooth flowing animation
-                
-                // Update shader uniforms with slower time progression
-                sphere.material.uniforms.time.value += 0.015;
-                sphere.material.uniforms.mouseX.value = mouseX;
-                sphere.material.uniforms.mouseY.value = mouseY;
-                
-                // Very gentle floating motion - no rotation
-                sphere.position.y = Math.sin(Date.now() * 0.0008) * 0.3;
-                sphere.position.x = Math.cos(Date.now() * 0.0006) * 0.2;
-            }
-            
-            renderer.render(scene, camera);
-        }
-
-        function onMouseMove(event) {
-            targetMouseX = (event.clientX / window.innerWidth) * 2 - 1;
-            targetMouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        // Event listeners
-        window.addEventListener('resize', onWindowResize);
-        window.addEventListener('mousemove', onMouseMove);
-
-        // Touch support for mobile
-        window.addEventListener('touchmove', (event) => {
-            event.preventDefault();
-            const touch = event.touches[0];
-            targetMouseX = (touch.clientX / window.innerWidth) * 2 - 1;
-            targetMouseY = -(touch.clientY / window.innerHeight) * 2 + 1;
+        const geometry = new THREE.SphereGeometry(4, 128, 128);
+        const material = new THREE.ShaderMaterial({
+          uniforms: {
+            time: { value: 10 },
+            texture1: { value: texture1 },
+            //   texture2: { value: texture2 },
+            //   texture3: { value: texture3 }
+          },
+          vertexShader: `
+          uniform float time;
+          varying vec3 vNormal;
+          varying vec3 vPosition;
+          float rand(vec2 co) {
+              return fract(cos(dot(co, vec2(12.9898,78.233))) * 43758.5453);
+          }
+          float noise(vec3 p) {
+              vec3 i = floor(p);
+              vec3 f = fract(p);
+              f = f*f*(3.0-2.0*f);
+              float a = rand(i.xy);
+              float b = rand(i.xy + vec2(1.0, 0.0));
+              float c = rand(i.xy + vec2(0.0, 1.0));
+              float d = rand(i.xy + vec2(1.0, 1.0));
+              return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+          }
+          void main() {
+            vNormal = normal;
+            vPosition = normalize(position);
+            vec3 pos = position;
+            float n = noise(pos * 1.5 + time * 0.8);
+            pos += normal * (n * 0.6);
+            pos.x += sin(time * 0.5 + pos.y * 2.0) * 0.05;
+            pos.y += cos(time * 0.6 + pos.x * 1.5) * 0.05;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+          }
+        `,
+          fragmentShader: `
+          uniform sampler2D texture1;
+          uniform sampler2D texture2;
+          uniform sampler2D texture3;
+          varying vec3 vNormal;
+          varying vec3 vPosition;
+          void main() {
+            vec2 sphericalUV = vec2(
+              atan(vPosition.z, vPosition.x) / (2.0 * 3.14159) + 0.5,
+              asin(vPosition.y) / 3.14159 + 0.5
+            );
+            vec3 tex1 = texture2D(texture1, sphericalUV).rgb;
+            vec3 tex2 = texture2D(texture2, sphericalUV).rgb;
+            vec3 tex3 = texture2D(texture3, sphericalUV).rgb;
+            vec3 blendedTex = (tex1 + tex2 + tex3) / 3.0;
+            float fresnel = pow(1.0 - dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)), 3.0);
+            vec3 reflectColor = vec3(0.85, 0.85, 1.0);
+            vec3 specular = reflectColor * fresnel;
+            vec3 lightDir = normalize(vec3(0.9, 8.0, 1));
+            float brightness = max(dot(vNormal, lightDir), 0.0);
+            vec3 light = vec3(1.2, 1.2, 1.2) * pow(brightness, 8.0);
+            vec3 finalColor = blendedTex * 0.7 + specular * 0.8 + light;
+            gl_FragColor = vec4(finalColor, 1.0);
+          }
+        `,
+          transparent: true,
         });
 
-        // Initialize
-        initThreeJS();
-        animate();
+        sphere = new THREE.Mesh(geometry, material);
+        scene.add(sphere);
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        if (sphere) {
+          sphere.material.uniforms.time.value += 0.03;
+        }
+        renderer.render(scene, camera);
+      }
     </script>
-</body>
+
+    <script>
+      const orbit = document.getElementById("orbit");
+
+      const projects = [
+        { img: "https://placehold.co/320x200?text=Boxing" },
+        { img: "https://placehold.co/320x200?text=Yacht" },
+        { img: "https://placehold.co/320x200?text=Coffee" },
+        { img: "https://placehold.co/320x200?text=Portugal" },
+        { img: "https://placehold.co/320x200?text=Studio" },
+        { img: "https://placehold.co/320x200?text=NFT" },
+        { img: "https://placehold.co/320x200?text=SpaceX" },
+      ];
+
+      const radius = 420; // Horizontal spread
+      const verticalSpread = 600; // Vertical curvature
+      const cards = [];
+
+      // Create image cards only (no title)
+      projects.forEach((proj, i) => {
+        const card = document.createElement("div");
+        card.className = "orbit-card";
+        card.innerHTML = `<img src="${proj.img}">`;
+        orbit.appendChild(card);
+        cards.push(card);
+      });
+
+      function updateCardPositions(scrollY) {
+        const maxScroll = 1000;
+        const clampedScroll = Math.min(scrollY, maxScroll);
+        const progress = clampedScroll * 0.005;
+
+        cards.forEach((card, i) => {
+          const angle = progress + i * 0.7;
+
+          // Coordinates for circular curve (S orbit)
+          const x = Math.sin(angle) * radius;
+          const y = Math.sin(angle * 1.7) * verticalSpread;
+          const z = Math.cos(angle) * radius;
+
+          card.style.transform = `
+          translate3d(${x}px, ${y}px, ${z}px)
+          rotateY(${-angle * 30}deg)
+        `;
+
+          card.classList.toggle("behind", z < 0);
+        });
+      }
+
+      window.addEventListener("scroll", () => {
+        updateCardPositions(window.scrollY);
+      });
+
+      // Initial setup
+      updateCardPositions(0);
+      document.body.style.height = "3000px";
+    </script>
+  </body>
 </html>
