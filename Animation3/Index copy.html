@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Smooth Thick Path Scroll - Spline Only</title>
+    <style>
+      body {
+        margin: 0;
+        background: black;
+        overflow-y: scroll;
+        height: 5000px;
+      }
+      canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        display: block;
+        z-index: -1;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
+    <script>
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        70,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // Spline control points (replaces your 1079 static points)
+      const controlPoints = [
+        new THREE.Vector3(-63, 37, 0),
+        new THREE.Vector3(-50, 38, 0),
+        new THREE.Vector3(-35, 26, 0),
+        new THREE.Vector3(-29, 5, 0),
+        new THREE.Vector3(-29, -8, 0),
+        new THREE.Vector3(-35, -20, 0),
+        new THREE.Vector3(-45, -25, 0),
+        new THREE.Vector3(-55, -22, 0),
+        new THREE.Vector3(-60, -7, 0),
+        new THREE.Vector3(-55, 8, 0),
+        new THREE.Vector3(-45, 20, 0),
+        new THREE.Vector3(-25, 23, 0),
+        new THREE.Vector3(0, 9, 0),
+        new THREE.Vector3(15, -7, 0),
+        new THREE.Vector3(25, -9, 0),
+        new THREE.Vector3(35, -14, 0),
+        new THREE.Vector3(42, -22, 0),
+        new THREE.Vector3(50, -27, 0),
+        new THREE.Vector3(57, -31, 0),
+      ];
+
+      const fullPath = new THREE.CatmullRomCurve3(controlPoints);
+      const fullPoints = fullPath.getPoints(1000);
+      let visiblePoints = 2;
+      let tubeMesh = null;
+
+      function updatePath() {
+        if (tubeMesh) scene.remove(tubeMesh);
+
+        const visibleCurve = new THREE.CatmullRomCurve3(
+          fullPoints.slice(0, visiblePoints)
+        );
+        const geometry = new THREE.TubeGeometry(
+          visibleCurve,
+          200,
+          1.2,
+          32,
+          false
+        );
+        const material = new THREE.MeshBasicMaterial({ color: 0x007bff });
+        tubeMesh = new THREE.Mesh(geometry, material);
+        scene.add(tubeMesh);
+      }
+
+      updatePath();
+      camera.position.z = 50;
+
+      // Scroll reveal
+      window.addEventListener("scroll", () => {
+        const scrollTop = window.scrollY;
+        const scrollHeight = document.body.scrollHeight - window.innerHeight;
+        const progress = scrollTop / scrollHeight;
+        const maxPoints = fullPoints.length;
+        visiblePoints = Math.floor(2 + progress * (maxPoints - 2));
+        updatePath();
+      });
+
+      window.addEventListener("resize", () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+      }
+      animate();
+    </script>
+  </body>
+</html>

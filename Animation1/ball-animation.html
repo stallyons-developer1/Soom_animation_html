@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Enhanced Scroll Globe Animation</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: sans-serif;
+      line-height: 1.6;
+    }
+
+    /* Section 1 - Content */
+    .section-1 {
+      height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+    }
+
+    .section-1 h1 {
+      font-size: 3rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      margin-bottom: 1rem;
+    }
+
+    .section-1 p {
+      font-size: 1.2rem;
+      max-width: 600px;
+    }
+
+    /* Globe Section - Sticky Container */
+    .globe-section {
+      height: 300vh; /* Extended height for scroll duration */ 
+      position: relative;
+    }
+
+    .globe-sticky-container {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+ 
+
+     
+
+    /* Globe Container */
+    #glob-cont {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .ball-container-globe {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .ball-globe {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, 
+                  rgba(135, 206, 250, 0.9) 0%, 
+                  rgba(70, 130, 180, 0.8) 30%, 
+                  rgba(25, 25, 112, 0.7) 70%, 
+                  rgba(0, 0, 139, 0.9) 100%);
+      box-shadow: 
+          0 0 40px rgba(135, 206, 250, 0.8),
+          0 0 80px rgba(70, 130, 180, 0.6),
+          0 0 120px rgba(25, 25, 112, 0.4),
+          inset 0 0 30px rgba(255, 255, 255, 0.3);
+      animation: bouncing 2s infinite ease-in-out;
+      transform-origin: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .ball-globe::before {
+      content: '';
+      position: absolute;
+      top: 15%;
+      left: 25%;
+      width: 30px;
+      height: 30px;
+      background: radial-gradient(circle, 
+                  rgba(255, 255, 255, 0.8) 0%, 
+                  rgba(255, 255, 255, 0.3) 50%, 
+                  transparent 100%);
+      border-radius: 50%;
+      filter: blur(2px);
+    }
+
+    .ball-globe::after {
+      content: '';
+      position: absolute;
+      top: 35%;
+      left: 15%;
+      width: 15px;
+      height: 15px;
+      background: radial-gradient(circle, 
+                  rgba(255, 255, 255, 0.9) 0%, 
+                  rgba(255, 255, 255, 0.4) 60%, 
+                  transparent 100%);
+      border-radius: 50%;
+      filter: blur(1px);
+    }
+
+    .ball-shadow {
+      position: absolute;
+      left: 50%;
+      bottom: -50px;
+      width: 100px;
+      height: 20px;
+      background: radial-gradient(ellipse, rgba(0, 0, 0, 0.6) 0%, rgba(40, 61, 111, 0.4) 70%);
+      border-radius: 50%;
+      transform: translateX(-50%);
+      animation: shadowBounce 2s infinite ease-in-out;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Section 3 - Content */
+    .section-3 {
+      height: 100vh;
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+    }
+
+    .section-3 h1 {
+      font-size: 3rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      margin-bottom: 1rem;
+    }
+
+    .section-3 p {
+      font-size: 1.2rem;
+      max-width: 600px;
+    }
+
+    /* Globe States */
+    .globe-hidden {
+      transform: translate(-50%, -150%) scale(1);
+      opacity: 0;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .globe-appearing {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .globe-moving-up {
+      transform: translate(-50%, 150%) scale(6);
+      opacity: 0;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes bouncing {
+      0% {
+        transform: translateY(0) scale(1, 1);
+        animation-timing-function: ease-out;
+      }
+      
+      25% {
+        transform: translateY(-10px) scale(1.05, 0.95);
+        animation-timing-function: ease-in;
+      }
+      
+      50% {
+        transform: translateY(0) scale(1.0, 1.1);
+        animation-timing-function: ease-out;
+      }
+      
+      75% {
+        transform: translateY(-5px) scale(1.02, 0.98);
+        animation-timing-function: ease-in;
+      }
+      
+      100% {
+        transform: translateY(0) scale(1, 1);
+        animation-timing-function: ease-out;
+      }
+    }
+
+    @keyframes shadowBounce {
+      0% {
+        transform: translateX(-50%) scale(1, 1);
+        opacity: 0.4;
+      }
+      
+      25% {
+        transform: translateX(-50%) scale(0.8, 0.8);
+        opacity: 0.2;
+      }
+      
+      50% {
+        transform: translateX(-50%) scale(1.2, 0.9);
+        opacity: 0.6;
+      }
+      
+      75% {
+        transform: translateX(-50%) scale(0.9, 0.9);
+        opacity: 0.3;
+      }
+      
+      100% {
+        transform: translateX(-50%) scale(1, 1);
+        opacity: 0.4;
+      }
+    }
+
+    /* Scroll indicator */
+    .scroll-indicator {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 15px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      z-index: 1001;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .progress-bar {
+      width: 100px;
+      height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+      margin-top: 5px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      border-radius: 2px;
+      transition: width 0.1s ease;
+    }
+
+  </style>
+</head>
+<body>
+  
+  <!-- Scroll Indicator -->
+  <div class="scroll-indicator">
+    <div> : <span id="globe-size"> </span></div>
+    <div> : <span id="progress"> </span></div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- Section 1 - Content -->
+  <section class="section-1">
+    <div>
+      <h1>Welcome to Globe Animation</h1>
+      <p>Scroll down  600px!</p>
+    </div>
+  </section>
+
+  <!-- Globe Section - Sticky -->
+  <section class="globe-section">
+    <div class="globe-sticky-container">
+      <!-- Globe Container -->
+      <div id="glob-cont" class="globe-hidden">
+        <div class="ball-container-globe">
+          <div class="ball-shadow"></div>
+          <div class="ball-globe"></div>
+        </div>
+      </div>
+      
+      <!-- Globe Content -->
+       
+    </div>
+  </section>
+
+  <!-- Section 3 - Content -->
+  <section class="section-3">
+    <div>
+      <h1>Mission Complete!</h1>
+      <p> transitions.</p>
+    </div>
+  </section>
+
+  <script>
+    const globeContainer = document.getElementById('glob-cont');
+    const globeSection = document.querySelector('.globe-section');
+    const progressSpan = document.getElementById('progress');
+    const globeSizeSpan = document.getElementById('globe-size');
+    const progressFill = document.getElementById('progress-fill');
+    
+    let currentGlobeState = 'hidden';
+    
+    function updateGlobe() {
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight - windowHeight;
+      const scrollProgress = Math.min(scrollY / documentHeight, 1);
+      
+      // Update progress indicator
+      progressSpan.textContent = Math.round(scrollProgress * 100) + '%';
+      progressFill.style.width = (scrollProgress * 100) + '%';
+      
+      // Get globe section boundaries
+      const globeSectionTop = globeSection.offsetTop;
+      const globeSectionHeight = globeSection.offsetHeight;
+      const globeSectionBottom = globeSectionTop + globeSectionHeight;
+      
+      // Calculate position within globe section
+      const globeProgress = Math.max(0, Math.min(1, (scrollY - globeSectionTop) / (globeSectionHeight - windowHeight)));
+      
+      if (scrollY >= globeSectionTop && scrollY < globeSectionBottom - windowHeight) {
+        // We're in the globe section
+        
+        // Calculate globe size (100px to 600px) - always based on progress
+        const minSize = 100;
+        const maxSize = 500;
+        const currentSize = minSize + (maxSize - minSize) * easeInOutCubic(globeProgress);
+        const scale = currentSize / minSize; // Scale based on 100px base
+        
+        // Calculate position (top to center) - always based on progress
+        const startY = -150; // Start from top (higher up)
+        const endY = -50;     // End at center
+        const currentY = startY + (endY - startY) * easeInOutCubic(globeProgress);
+        
+        // Show globe if hidden
+        if (currentGlobeState === 'hidden') {
+          currentGlobeState = 'appearing';
+          globeContainer.classList.remove('globe-hidden', 'globe-moving-up');
+          globeContainer.classList.add('globe-appearing');
+        } else if (currentGlobeState === 'moving-up') {
+          currentGlobeState = 'appearing';
+          globeContainer.classList.remove('globe-moving-up');
+          globeContainer.classList.add('globe-appearing');
+        }
+        
+        // Apply transform with position and scale - this works for both directions
+        globeContainer.style.transform = `translate(-50%, ${currentY}%) scale(${scale})`;
+        globeContainer.style.opacity = Math.min(1, globeProgress * 2); // Fade in based on progress
+        
+        // Update size indicator
+        globeSizeSpan.textContent = Math.round(currentSize) + 'px';
+        
+      } else if (scrollY >= globeSectionBottom - windowHeight) {
+        // We've scrolled past the globe section - hide at bottom
+        if (currentGlobeState !== 'moving-up') {
+          currentGlobeState = 'moving-up';
+          globeContainer.classList.remove('globe-appearing');
+          globeContainer.classList.add('globe-moving-up');
+          
+          // Move to bottom
+          globeContainer.style.transform = 'translate(-50%, 150%) scale(6)';
+          globeContainer.style.opacity = '0';
+          globeSizeSpan.textContent = 'Moving Down';
+        }
+        
+      } else {
+        // We're before the globe section - hide at top
+        if (currentGlobeState !== 'hidden') {
+          currentGlobeState = 'hidden';
+          globeContainer.classList.remove('globe-appearing', 'globe-moving-up');
+          globeContainer.classList.add('globe-hidden');
+          
+          // Ensure it's at top position with small size
+          globeContainer.style.transform = 'translate(-50%, -150%) scale(1)';
+          globeContainer.style.opacity = '0';
+          globeSizeSpan.textContent = 'Hidden (Top)';
+        }
+      }
+    }
+    
+    // Easing function for smooth animation
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+    
+    // Throttled scroll handler for better performance
+    let ticking = false;
+    
+    function handleScroll() {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          updateGlobe();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }
+    
+    // Event listeners
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', updateGlobe);
+    
+    // Initial call
+    updateGlobe();
+    
+  </script>
+  
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Perfectly Smooth Spline Path</title>
+    <style>
+      body {
+        margin: 0;
+        background: black;
+        overflow-y: scroll;
+        height: 5000px;
+      }
+      canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        display: block;
+        z-index: -1;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+
+    <script>
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+
+      // Set canvas size
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resizeCanvas();
+
+      // Enhanced control points with additional intermediate points for smoothness
+      function getUltraSmoothControlPoints() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const centerY = h * 0.5;
+
+        const scaleX = w / 186.3;
+        const scaleY = h / 62.3;
+
+        const transform = (x, y) => [
+          (x + 100.1) * scaleX,
+          centerY - y * scaleY,
+        ];
+
+        // More control points for smoother curves - especially around sharp turns
+        return [
+          transform(-100, 31.5),
+          transform(-97.5, 31.5), // Added intermediate
+          transform(-95, 31.5),
+          transform(-91, 30.8), // Added intermediate
+          transform(-87, 30),
+          transform(-83, 28.5), // Added intermediate
+          transform(-79, 27),
+          transform(-75.5, 25), // Added intermediate
+          transform(-72, 23),
+          transform(-69, 19.5), // Added intermediate
+          transform(-66, 16),
+          transform(-64, 11), // Added intermediate
+          transform(-62, 6),
+          transform(-61, 2.5), // Added intermediate
+          transform(-60, -1),
+          transform(-60, -4.5), // Added intermediate
+          transform(-60, -8),
+          transform(-60.5, -9.5), // Added intermediate
+          transform(-61, -11),
+          transform(-61, -13.5), // Added intermediate
+          transform(-61, -16),
+          transform(-62, -18.5), // Added intermediate
+          transform(-63, -21),
+          transform(-65, -24), // Added intermediate
+          transform(-67, -27),
+          transform(-70.5, -28.5), // Added intermediate
+          transform(-74, -30),
+          transform(-78, -30), // Added intermediate
+          transform(-82, -30),
+          transform(-84.5, -29.5), // Added intermediate
+          transform(-87, -29),
+          transform(-89, -25), // Added intermediate
+          transform(-91, -21),
+          transform(-91, -19), // Added intermediate
+          transform(-91, -17),
+          transform(-88.5, -11), // Added intermediate
+          transform(-86, -5),
+          transform(-79.5, 1), // Added intermediate
+          transform(-73, 7),
+          transform(-66, 10), // Added intermediate
+          transform(-59, 13),
+          transform(-52.5, 14), // Added intermediate
+          transform(-46, 15),
+          transform(-41, 13.5), // Added intermediate
+          transform(-36, 12),
+          transform(-33, 10.5), // Added intermediate
+          transform(-30, 9),
+          transform(-25, 9), // Added intermediate
+          transform(-20, 9),
+          transform(-18, 8.75), // Added intermediate
+          transform(-16, 8.5),
+          transform(-13, 6.75), // Added intermediate
+          transform(-10, 5),
+          transform(-5, 2.5), // Added intermediate
+          transform(0, 0),
+          transform(5, -2.5), // Added intermediate
+          transform(10, -5),
+          transform(17.5, -7), // Added intermediate
+          transform(25, -9),
+          transform(30.5, -9.25), // Added intermediate
+          transform(36, -9.5),
+          transform(40.5, -9.75), // Added intermediate
+          transform(45, -10),
+          transform(49, -9.25), // Added intermediate
+          transform(53, -8.5),
+          transform(57.5, -11.25), // Added intermediate
+          transform(62, -14),
+          transform(68, -18.5), // Added intermediate
+          transform(74, -23),
+          transform(76.5, -24.5), // Added intermediate
+          transform(79, -26),
+          transform(82.5, -26), // Added intermediate
+          transform(86, -26),
+          transform(86.1, -25.4), // Added intermediate
+          transform(86.2, -24.8),
+        ];
+      }
+
+      // B-spline interpolation for maximum smoothness
+      function bSplineInterpolation(t, points, degree = 3) {
+        const n = points.length - 1;
+        const knots = [];
+
+        // Generate uniform knot vector
+        for (let i = 0; i <= n + degree + 1; i++) {
+          knots.push(i);
+        }
+
+        // De Boor's algorithm for B-spline evaluation
+        function deBoor(t, degree, points, knots) {
+          const n = points.length - 1;
+
+          // Find knot span
+          let k = degree;
+          while (k <= n && knots[k] <= t) k++;
+          k--;
+
+          // Copy relevant control points
+          const d = [];
+          for (let j = 0; j <= degree; j++) {
+            d[j] = [points[k - degree + j][0], points[k - degree + j][1]];
+          }
+
+          // Compute point on curve
+          for (let r = 1; r <= degree; r++) {
+            for (let j = degree; j >= r; j--) {
+              const alpha =
+                (t - knots[k - degree + j]) /
+                (knots[k + j - r + 1] - knots[k - degree + j]);
+              d[j] = [
+                (1 - alpha) * d[j - 1][0] + alpha * d[j][0],
+                (1 - alpha) * d[j - 1][1] + alpha * d[j][1],
+              ];
+            }
+          }
+
+          return d[degree];
+        }
+
+        const tMin = knots[degree];
+        const tMax = knots[n + 1];
+        const normalizedT = tMin + (tMax - tMin) * t;
+
+        return deBoor(normalizedT, degree, points, knots);
+      }
+
+      // Generate ultra-high resolution smooth path
+      function generatePerfectlySmoothPath(controlPoints, resolution = 10000) {
+        const points = [];
+
+        // Use extremely high resolution for perfect smoothness
+        for (let i = 0; i <= resolution; i++) {
+          const t = i / resolution;
+          const point = bSplineInterpolation(t, controlPoints, 3);
+          points.push(point);
+        }
+
+        // Apply multiple smoothing passes
+        return applyAdvancedSmoothing(points, 5);
+      }
+
+      // Advanced multi-pass smoothing with different kernels
+      function applyAdvancedSmoothing(points, passes = 5) {
+        let smoothedPoints = [...points];
+
+        for (let pass = 0; pass < passes; pass++) {
+          const newPoints = [smoothedPoints[0]]; // Keep first point
+
+          for (let i = 1; i < smoothedPoints.length - 1; i++) {
+            const prev2 = smoothedPoints[Math.max(0, i - 2)];
+            const prev1 = smoothedPoints[i - 1];
+            const curr = smoothedPoints[i];
+            const next1 = smoothedPoints[i + 1];
+            const next2 =
+              smoothedPoints[Math.min(smoothedPoints.length - 1, i + 2)];
+
+            // Gaussian-like smoothing kernel for maximum smoothness
+            const smoothed = [
+              prev2[0] * 0.05 +
+                prev1[0] * 0.25 +
+                curr[0] * 0.4 +
+                next1[0] * 0.25 +
+                next2[0] * 0.05,
+              prev2[1] * 0.05 +
+                prev1[1] * 0.25 +
+                curr[1] * 0.4 +
+                next1[1] * 0.25 +
+                next2[1] * 0.05,
+            ];
+            newPoints.push(smoothed);
+          }
+
+          newPoints.push(smoothedPoints[smoothedPoints.length - 1]); // Keep last point
+          smoothedPoints = newPoints;
+        }
+
+        return smoothedPoints;
+      }
+
+      // Generate the perfectly smooth path
+      let fullPath = generatePerfectlySmoothPath(
+        getUltraSmoothControlPoints(),
+        12000
+      );
+      let visibleProgress = 0;
+
+      // Draw with maximum smoothness settings
+      function drawPerfectlySmooth(progress) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (progress <= 0) return;
+
+        const visiblePoints = Math.floor(progress * fullPath.length);
+        if (visiblePoints < 2) return;
+
+        // Maximum quality settings
+        ctx.strokeStyle = "#3238F1";
+        ctx.lineWidth = Math.max(24, canvas.width * 0.02);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        // Enhanced glow
+        ctx.shadowColor = "#4A90E2";
+        ctx.shadowBlur = 5;
+
+        // Maximum anti-aliasing
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+
+        // Use Path2D with cubic bezier curves for ultimate smoothness
+        const path = new Path2D();
+        path.moveTo(fullPath[0][0], fullPath[0][1]);
+
+        // Draw using cubic bezier curves with carefully calculated control points
+        for (let i = 0; i < visiblePoints - 1; i += 1) {
+          const current = fullPath[i];
+          const next = fullPath[Math.min(i + 1, visiblePoints - 1)];
+          const nextNext = fullPath[Math.min(i + 2, visiblePoints - 1)];
+          const nextNextNext = fullPath[Math.min(i + 3, visiblePoints - 1)];
+
+          // Calculate smooth control points for cubic bezier
+          const cp1x = current[0] + (next[0] - current[0]) / 3;
+          const cp1y = current[1] + (next[1] - current[1]) / 3;
+          const cp2x = next[0] - (nextNext[0] - current[0]) / 6;
+          const cp2y = next[1] - (nextNext[1] - current[1]) / 6;
+
+          path.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, next[0], next[1]);
+        }
+
+        ctx.stroke(path);
+        ctx.shadowBlur = 0;
+      }
+
+      // Smooth scroll handling
+      let animationFrame;
+      let lastScrollTime = 0;
+
+      window.addEventListener("scroll", () => {
+        const now = performance.now();
+        if (now - lastScrollTime < 8) return; // Throttle to ~120fps max
+        lastScrollTime = now;
+
+        if (animationFrame) {
+          cancelAnimationFrame(animationFrame);
+        }
+
+        animationFrame = requestAnimationFrame(() => {
+          const scrollTop = window.scrollY;
+          const scrollHeight = document.body.scrollHeight - window.innerHeight;
+          visibleProgress = Math.max(0, Math.min(1, scrollTop / scrollHeight));
+          drawPerfectlySmooth(visibleProgress);
+        });
+      });
+
+      // Resize handler
+      window.addEventListener("resize", () => {
+        resizeCanvas();
+        fullPath = generatePerfectlySmoothPath(
+          getUltraSmoothControlPoints(),
+          12000
+        );
+        drawPerfectlySmooth(visibleProgress);
+      });
+
+      // Initial draw
+      drawPerfectlySmooth(0);
+    </script>
+  </body>
+</html>

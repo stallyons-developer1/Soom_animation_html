@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Perfectly Smooth Spline Path with Paper Fold Video</title>
+    <style>
+      body {
+        margin: 0;
+        background: black;
+        overflow-y: scroll;
+        height: 5000px;
+        font-family: Arial, sans-serif;
+      }
+
+      #canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        display: block;
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      #three-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      #video {
+        position: fixed;
+        bottom: 120px;
+        left: 20px;
+        width: 300px;
+        height: 169px;
+        border-radius: 15px;
+        box-shadow: 0 6px 25px rgba(50, 56, 241, 0.4);
+        z-index: 3;
+        opacity: 0.95;
+      }
+
+      #video.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <div id="three-container"></div>
+
+    <video id="video" autoplay muted loop>
+      <source
+        src="https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4"
+        type="video/mp4"
+      />
+      <source
+        src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        type="video/mp4"
+      />
+      Your browser does not support the video tag.
+    </video>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      // Canvas setup for spline path
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      const video = document.getElementById("video");
+      const threeContainer = document.getElementById("three-container");
+
+      // Three.js setup
+      let scene, camera, renderer, videoMesh, videoTexture;
+      let animationId;
+      let isAnimating = false;
+      let videoAnimationState = "initial"; // 'initial', 'animating-forward', 'at-center', 'animating-back'
+
+      // Animation variables
+      let animationProgress = 0;
+      let animationDirection = 1; // 1 for forward, -1 for backward
+
+      // Random video sources
+      const videoSources = [
+        "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4",
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+      ];
+
+      function setRandomVideo() {
+        const randomIndex = Math.floor(Math.random() * videoSources.length);
+        video.src = videoSources[randomIndex];
+      }
+
+      setRandomVideo();
+
+      function initThreeJS() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(
+          75,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          1000
+        );
+
+        renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000, 0);
+        threeContainer.appendChild(renderer.domElement);
+
+        // Create video texture
+        videoTexture = new THREE.VideoTexture(video);
+        videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.magFilter = THREE.LinearFilter;
+
+        // Create geometry for paper fold effect
+        const geometry = new THREE.PlaneGeometry(4, 2.25, 32, 18);
+        const material = new THREE.MeshBasicMaterial({
+          map: videoTexture,
+          side: THREE.DoubleSide,
+        });
+
+        videoMesh = new THREE.Mesh(geometry, material);
+        scene.add(videoMesh);
+
+        // Position camera
+        camera.position.z = 5;
+
+        // Initially hide the Three.js mesh
+        videoMesh.visible = false;
+      }
+
+      function animatePaperFold() {
+        if (!isAnimating) return;
+
+        animationProgress += animationDirection * 0.02;
+        animationProgress = Math.max(0, Math.min(1, animationProgress));
+
+        if (animationDirection === 1) {
+          // Forward animation
+          updatePaperFoldForward(animationProgress);
+
+          if (animationProgress >= 1) {
+            isAnimating = false;
+            videoAnimationState = "at-center";
+          }
+        } else {
+          // Backward animation
+          updatePaperFoldBackward(animationProgress);
+
+          if (animationProgress <= 0) {
+            isAnimating = false;
+            videoAnimationState = "initial";
+            videoMesh.visible = false;
+            video.classList.remove("hidden");
+          }
+        }
+
+        renderer.render(scene, camera);
+
+        if (isAnimating) {
+          animationId = requestAnimationFrame(animatePaperFold);
+        }
+      }
+
+      function updatePaperFoldForward(progress) {
+        const easeProgress = easeInOutCubic(progress);
+
+        // Phase 1: Fold the paper (0-0.6)
+        if (progress <= 0.6) {
+          const foldProgress = progress / 0.6;
+
+          // Position from left to center
+          const startX = -4;
+          const endX = 0;
+          videoMesh.position.x = startX + (endX - startX) * foldProgress;
+          videoMesh.position.y = -1 + foldProgress * 1;
+
+          // Create fold effect by modifying geometry
+          updateGeometryForFold(foldProgress);
+
+          // Rotation during fold
+          videoMesh.rotation.y = foldProgress * Math.PI * 0.3;
+          videoMesh.rotation.z = foldProgress * Math.PI * 0.1;
+        } else {
+          // Phase 2: Unfold and center (0.6-1.0)
+          const unfoldProgress = (progress - 0.6) / 0.4;
+
+          // Center position
+          videoMesh.position.x = 0;
+          videoMesh.position.y = 0;
+
+          // Unfold the geometry
+          updateGeometryForFold(1 - unfoldProgress);
+
+          // Straighten rotation
+          videoMesh.rotation.y = (1 - unfoldProgress) * Math.PI * 0.3;
+          videoMesh.rotation.z = (1 - unfoldProgress) * Math.PI * 0.1;
+
+          // Scale up for final presentation
+          const scale = 1 + unfoldProgress * 1.5;
+          videoMesh.scale.set(scale, scale, scale);
+        }
+      }
+
+      function updatePaperFoldBackward(progress) {
+        const reverseProgress = 1 - progress;
+        updatePaperFoldForward(reverseProgress);
+      }
+
+      function updateGeometryForFold(foldAmount) {
+        const geometry = videoMesh.geometry;
+        const position = geometry.attributes.position;
+
+        // Reset positions
+        for (let i = 0; i < position.count; i++) {
+          const x = position.getX(i);
+          const y = position.getY(i);
+          const z = position.getZ(i);
+
+          // Create fold effect - bend the right half
+          if (x > 0) {
+            const foldAngle = foldAmount * Math.PI * 0.5;
+            const distance = x * 2; // Distance from fold line
+
+            const newX = Math.cos(foldAngle) * distance;
+            const newZ = Math.sin(foldAngle) * distance * 0.5;
+
+            position.setX(i, newX);
+            position.setZ(i, newZ);
+          } else {
+            position.setX(i, x);
+            position.setZ(i, 0);
+          }
+        }
+
+        position.needsUpdate = true;
+        geometry.computeVertexNormals();
+      }
+
+      function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+
+      function startVideoAnimation(direction) {
+        if (isAnimating) return;
+
+        animationDirection = direction;
+        isAnimating = true;
+
+        if (direction === 1) {
+          // Starting forward animation
+          video.classList.add("hidden");
+          videoMesh.visible = true;
+          videoMesh.scale.set(1, 1, 1);
+          animationProgress = 0;
+          videoAnimationState = "animating-forward";
+        } else {
+          // Starting backward animation
+          animationProgress = 1;
+          videoAnimationState = "animating-back";
+        }
+
+        animatePaperFold();
+      }
+
+      // Canvas resize
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        if (camera && renderer) {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+      }
+      resizeCanvas();
+
+      // Spline path code (unchanged)
+      function getUltraSmoothControlPoints() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const centerY = h * 0.5;
+
+        const scaleX = w / 186.3;
+        const scaleY = h / 62.3;
+
+        const transform = (x, y) => [
+          (x + 100.1) * scaleX,
+          centerY - y * scaleY,
+        ];
+
+        return [
+          transform(-100, 31.5),
+          transform(-97.5, 31.5),
+          transform(-95, 31.5),
+          transform(-91, 30.8),
+          transform(-87, 30),
+          transform(-83, 28.5),
+          transform(-79, 27),
+          transform(-75.5, 25),
+          transform(-72, 23),
+          transform(-69, 19.5),
+          transform(-66, 16),
+          transform(-64, 11),
+          transform(-62, 6),
+          transform(-61, 2.5),
+          transform(-60, -1),
+          transform(-60, -4.5),
+          transform(-60, -8),
+          transform(-60.5, -9.5),
+          transform(-61, -11),
+          transform(-61, -13.5),
+          transform(-61, -16),
+          transform(-62, -18.5),
+          transform(-63, -21),
+          transform(-65, -24),
+          transform(-67, -27),
+          transform(-70.5, -28.5),
+          transform(-74, -30),
+          transform(-78, -30),
+          transform(-82, -30),
+          transform(-84.5, -29.5),
+          transform(-87, -29),
+          transform(-89, -25),
+          transform(-91, -21),
+          transform(-91, -19),
+          transform(-91, -17),
+          transform(-88.5, -11),
+          transform(-86, -5),
+          transform(-79.5, 1),
+          transform(-73, 7),
+          transform(-66, 10),
+          transform(-59, 13),
+          transform(-52.5, 14),
+          transform(-46, 15),
+          transform(-41, 13.5),
+          transform(-36, 12),
+          transform(-33, 10.5),
+          transform(-30, 9),
+          transform(-25, 9),
+          transform(-20, 9),
+          transform(-18, 8.75),
+          transform(-16, 8.5),
+          transform(-13, 6.75),
+          transform(-10, 5),
+          transform(-5, 2.5),
+          transform(0, 0),
+          transform(5, -2.5),
+          transform(10, -5),
+          transform(17.5, -7),
+          transform(25, -9),
+          transform(30.5, -9.25),
+          transform(36, -9.5),
+          transform(40.5, -9.75),
+          transform(45, -10),
+          transform(49, -9.25),
+          transform(53, -8.5),
+          transform(57.5, -11.25),
+          transform(62, -14),
+          transform(68, -18.5),
+          transform(74, -23),
+          transform(76.5, -24.5),
+          transform(79, -26),
+          transform(82.5, -26),
+          transform(86, -26),
+          transform(86.1, -25.4),
+          transform(86.2, -24.8),
+        ];
+      }
+
+      function bSplineInterpolation(t, points, degree = 3) {
+        const n = points.length - 1;
+        const knots = [];
+
+        for (let i = 0; i <= n + degree + 1; i++) {
+          knots.push(i);
+        }
+
+        function deBoor(t, degree, points, knots) {
+          const n = points.length - 1;
+
+          let k = degree;
+          while (k <= n && knots[k] <= t) k++;
+          k--;
+
+          const d = [];
+          for (let j = 0; j <= degree; j++) {
+            d[j] = [points[k - degree + j][0], points[k - degree + j][1]];
+          }
+
+          for (let r = 1; r <= degree; r++) {
+            for (let j = degree; j >= r; j--) {
+              const alpha =
+                (t - knots[k - degree + j]) /
+                (knots[k + j - r + 1] - knots[k - degree + j]);
+              d[j] = [
+                (1 - alpha) * d[j - 1][0] + alpha * d[j][0],
+                (1 - alpha) * d[j - 1][1] + alpha * d[j][1],
+              ];
+            }
+          }
+
+          return d[degree];
+        }
+
+        const tMin = knots[degree];
+        const tMax = knots[n + 1];
+        const normalizedT = tMin + (tMax - tMin) * t;
+
+        return deBoor(normalizedT, degree, points, knots);
+      }
+
+      function generatePerfectlySmoothPath(controlPoints, resolution = 10000) {
+        const points = [];
+
+        for (let i = 0; i <= resolution; i++) {
+          const t = i / resolution;
+          const point = bSplineInterpolation(t, controlPoints, 3);
+          points.push(point);
+        }
+
+        return applyAdvancedSmoothing(points, 5);
+      }
+
+      function applyAdvancedSmoothing(points, passes = 5) {
+        let smoothedPoints = [...points];
+
+        for (let pass = 0; pass < passes; pass++) {
+          const newPoints = [smoothedPoints[0]];
+
+          for (let i = 1; i < smoothedPoints.length - 1; i++) {
+            const prev2 = smoothedPoints[Math.max(0, i - 2)];
+            const prev1 = smoothedPoints[i - 1];
+            const curr = smoothedPoints[i];
+            const next1 = smoothedPoints[i + 1];
+            const next2 =
+              smoothedPoints[Math.min(smoothedPoints.length - 1, i + 2)];
+
+            const smoothed = [
+              prev2[0] * 0.05 +
+                prev1[0] * 0.25 +
+                curr[0] * 0.4 +
+                next1[0] * 0.25 +
+                next2[0] * 0.05,
+              prev2[1] * 0.05 +
+                prev1[1] * 0.25 +
+                curr[1] * 0.4 +
+                next1[1] * 0.25 +
+                next2[1] * 0.05,
+            ];
+            newPoints.push(smoothed);
+          }
+
+          newPoints.push(smoothedPoints[smoothedPoints.length - 1]);
+          smoothedPoints = newPoints;
+        }
+
+        return smoothedPoints;
+      }
+
+      let fullPath = generatePerfectlySmoothPath(
+        getUltraSmoothControlPoints(),
+        12000
+      );
+      let visibleProgress = 0;
+      let pathCompleted = false;
+
+      function drawPerfectlySmooth(progress) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (progress <= 0) return;
+
+        const visiblePoints = Math.floor(progress * fullPath.length);
+        if (visiblePoints < 2) return;
+
+        ctx.strokeStyle = "#3238F1";
+        ctx.lineWidth = Math.max(24, canvas.width * 0.02);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.shadowColor = "#4A90E2";
+        ctx.shadowBlur = 5;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+
+        const path = new Path2D();
+        path.moveTo(fullPath[0][0], fullPath[0][1]);
+
+        for (let i = 0; i < visiblePoints - 1; i += 1) {
+          const current = fullPath[i];
+          const next = fullPath[Math.min(i + 1, visiblePoints - 1)];
+          const nextNext = fullPath[Math.min(i + 2, visiblePoints - 1)];
+
+          const cp1x = current[0] + (next[0] - current[0]) / 3;
+          const cp1y = current[1] + (next[1] - current[1]) / 3;
+          const cp2x = next[0] - (nextNext[0] - current[0]) / 6;
+          const cp2y = next[1] - (nextNext[1] - current[1]) / 6;
+
+          path.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, next[0], next[1]);
+        }
+
+        ctx.stroke(path);
+        ctx.shadowBlur = 0;
+
+        // Handle video animation states
+        if (
+          progress >= 0.99 &&
+          !pathCompleted &&
+          videoAnimationState === "initial"
+        ) {
+          pathCompleted = true;
+          startVideoAnimation(1);
+        } else if (
+          progress < 0.99 &&
+          pathCompleted &&
+          videoAnimationState === "at-center"
+        ) {
+          pathCompleted = false;
+          startVideoAnimation(-1);
+        }
+      }
+
+      // Scroll handling
+      let animationFrame;
+      let lastScrollTime = 0;
+
+      window.addEventListener("scroll", () => {
+        const now = performance.now();
+        if (now - lastScrollTime < 8) return;
+        lastScrollTime = now;
+
+        if (animationFrame) {
+          cancelAnimationFrame(animationFrame);
+        }
+
+        animationFrame = requestAnimationFrame(() => {
+          const scrollTop = window.scrollY;
+          const scrollHeight = document.body.scrollHeight - window.innerHeight;
+          visibleProgress = Math.max(0, Math.min(1, scrollTop / scrollHeight));
+          drawPerfectlySmooth(visibleProgress);
+        });
+      });
+
+      // Resize handler
+      window.addEventListener("resize", () => {
+        resizeCanvas();
+        fullPath = generatePerfectlySmoothPath(
+          getUltraSmoothControlPoints(),
+          12000
+        );
+        drawPerfectlySmooth(visibleProgress);
+      });
+
+      // Video error handling
+      video.addEventListener("error", () => {
+        console.log("Video failed to load, trying next source...");
+        setRandomVideo();
+      });
+
+      // Initialize
+      initThreeJS();
+      drawPerfectlySmooth(0);
+    </script>
+  </body>
+</html>

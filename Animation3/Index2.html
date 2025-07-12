@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Draw and Show Points</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: monospace;
+      }
+      canvas {
+        background: #f0f0f0;
+        display: block;
+      }
+      #pointsBox {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.85);
+        color: #00ff88;
+        padding: 10px;
+        max-height: 95vh;
+        overflow-y: auto;
+        font-size: 12px;
+        width: 350px;
+        white-space: pre;
+        z-index: 10;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="drawCanvas"></canvas>
+    <div id="pointsBox">Draw on canvas...</div>
+
+    <script>
+      const canvas = document.getElementById("drawCanvas");
+      const ctx = canvas.getContext("2d");
+      const pointsBox = document.getElementById("pointsBox");
+
+      let points = [];
+      let drawing = false;
+
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas);
+
+      canvas.addEventListener("mousedown", (e) => {
+        drawing = true;
+        points = [];
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        const x = e.clientX;
+        const y = e.clientY;
+        ctx.moveTo(x, y);
+        points.push({ x, y });
+      });
+
+      canvas.addEventListener("mousemove", (e) => {
+        if (!drawing) return;
+        const x = e.clientX;
+        const y = e.clientY;
+        ctx.lineTo(x, y);
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        points.push({ x, y });
+      });
+
+      canvas.addEventListener("mouseup", () => {
+        drawing = false;
+        const normalizedPoints = points.map((p) => {
+          const x = (p.x - canvas.width / 2) / 10;
+          const y = (canvas.height / 2 - p.y) / 10;
+          return `new THREE.Vector3(${x.toFixed(2)}, ${y.toFixed(2)}, 0),`;
+        });
+        pointsBox.innerText =
+          `// Total Points: ${normalizedPoints.length}\n` +
+          normalizedPoints.join("\n");
+      });
+    </script>
+  </body>
+</html>

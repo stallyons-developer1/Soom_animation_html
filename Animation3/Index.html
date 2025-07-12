@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Morphing - Image Match</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        overflow-x: hidden;
+      }
+
+      #container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+      }
+
+      .content {
+        height: 300vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container"></div>
+    <div class="content"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      let scene, camera, renderer, videoMesh, video;
+      let scrollProgress = 0;
+
+      const vertexShader = `
+            uniform float uTime;
+            uniform float uProgress;
+            
+            varying vec2 vUv;
+            
+            void main() {
+                vUv = uv;
+                vec3 pos = position;
+                
+                if (uProgress < 0.3) {
+                    // Stage 1: Corner ko bahar nikalna - sharp pull
+                    float pullProgress = uProgress / 0.3;
+                    
+                    // Top-right corner ko identify karna
+                    vec2 cornerPos = vec2(1.0, 1.0);
+                    float cornerDist = distance(uv, cornerPos);
+                    
+                    // Sharp corner influence - sirf corner area affect ho
+                    float influence = step(cornerDist, 0.3) * (1.0 - cornerDist / 0.3);
+                    
+                    // Corner ko bahar stretch karna
+                    vec2 pullDirection = normalize(uv - cornerPos);
+                    float pullAmount = influence * pullProgress * 0.6;
+                    
+                    pos.x += pullDirection.x * pullAmount;
+                    pos.y += pullDirection.y * pullAmount;
+                    
+                } else if (uProgress < 0.6) {
+                    // Stage 2: Lamba karna - elongate the stretched part
+                    float elongateProgress = (uProgress - 0.3) / 0.3;
+                    
+                    // Horizontal elongation
+                    if (uv.x > 0.7) {
+                        pos.x += elongateProgress * 0.5;
+                    }
+                    
+                    // Vertical squash for contrast
+                    pos.y *= (1.0 - elongateProgress * 0.2);
+                    
+                } else if (uProgress < 0.8) {
+                    // Stage 3: Folding animation - sharp fold
+                    float foldProgress = (uProgress - 0.6) / 0.2;
+                    
+                    // Create sharp fold line at x = 0.5
+                    if (uv.x > 0.5) {
+                        float foldAngle = foldProgress * 1.57; // 90 degrees
+                        float foldDistance = (uv.x - 0.5) * 2.0;
+                        
+                        pos.x = 0.5 + cos(foldAngle) * foldDistance;
+                        pos.z = sin(foldAngle) * foldDistance * 0.5;
+                    }
+                    
+                } else {
+                    // Stage 4: Final center unfold
+                    float unfoldProgress = (uProgress - 0.8) / 0.2;
+                    pos = mix(pos, position, unfoldProgress);
+                }
+                
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+            }
+        `;
+
+      const fragmentShader = `
+            uniform sampler2D uTexture;
+            uniform float uProgress;
+            
+            varying vec2 vUv;
+            
+            void main() {
+                vec2 uv = vUv;
+                
+                // Rounded corners like your image
+                vec2 center = abs(uv - 0.5);
+                float cornerRadius = 0.1;
+                vec2 corner = max(center - (0.5 - cornerRadius), 0.0);
+                float rounded = 1.0 - smoothstep(0.0, cornerRadius, length(corner));
+                
+                if (rounded < 0.5) discard;
+                
+                vec4 videoColor = texture2D(uTexture, uv);
+                gl_FragColor = videoColor;
+            }
+        `;
+
+      function init() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(
+          75,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          1000
+        );
+        camera.position.z = 2;
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000, 0);
+        document.getElementById("container").appendChild(renderer.domElement);
+
+        // Video setup
+        video = document.createElement("video");
+        video.src =
+          "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+        video.crossOrigin = "anonymous";
+        video.loop = true;
+        video.muted = true;
+        video.playsInline = true;
+
+        const videoTexture = new THREE.VideoTexture(video);
+        videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.magFilter = THREE.LinearFilter;
+
+        const geometry = new THREE.PlaneGeometry(2, 1.2, 32, 32);
+        const material = new THREE.ShaderMaterial({
+          uniforms: {
+            uTexture: { value: videoTexture },
+            uTime: { value: 0 },
+            uProgress: { value: 0 },
+          },
+          vertexShader: vertexShader,
+          fragmentShader: fragmentShader,
+          transparent: true,
+        });
+
+        videoMesh = new THREE.Mesh(geometry, material);
+        scene.add(videoMesh);
+
+        // Initial position - left side
+        videoMesh.position.x = -1.5;
+        videoMesh.position.y = 0;
+        videoMesh.scale.set(0.7, 0.7, 1);
+
+        video.play().catch((e) => console.log("Video autoplay prevented"));
+
+        window.addEventListener("scroll", onScroll);
+        window.addEventListener("resize", onWindowResize);
+
+        animate();
+      }
+
+      function onScroll() {
+        const scrollTop = window.pageYOffset;
+        const maxScroll = document.body.scrollHeight - window.innerHeight;
+        scrollProgress = Math.min(scrollTop / maxScroll, 1);
+        updateVideoAnimation();
+      }
+
+      function updateVideoAnimation() {
+        if (!videoMesh) return;
+
+        videoMesh.material.uniforms.uProgress.value = scrollProgress;
+
+        if (scrollProgress < 0.3) {
+          // Stage 1: Left side mein, corner ko bahar nikalna
+          videoMesh.position.x = -1.5;
+          videoMesh.position.y = 0;
+          videoMesh.scale.setScalar(0.7);
+          videoMesh.rotation.z = 0;
+        } else if (scrollProgress < 0.6) {
+          // Stage 2: Lamba karna - elongation
+          const progress = (scrollProgress - 0.3) / 0.3;
+          videoMesh.position.x = -1.5;
+          videoMesh.position.y = 0;
+          // Scale horizontally more during elongation
+          videoMesh.scale.set(0.7 + progress * 0.3, 0.7, 1);
+          videoMesh.rotation.z = 0;
+        } else if (scrollProgress < 0.8) {
+          // Stage 3: Folding animation - move towards center
+          const progress = (scrollProgress - 0.6) / 0.2;
+          videoMesh.position.x = -1.5 + progress * 1.2; // Move towards center
+          videoMesh.position.y = 0;
+          videoMesh.scale.setScalar(0.7 + progress * 0.2);
+          videoMesh.rotation.z = progress * 0.5; // Slight rotation during fold
+        } else {
+          // Stage 4: Final center position - unfold
+          const progress = (scrollProgress - 0.8) / 0.2;
+          videoMesh.position.x = -0.3 + progress * 0.3; // Final center
+          videoMesh.position.y = 0;
+          videoMesh.scale.setScalar(0.9 + progress * 0.4); // Larger final size
+          videoMesh.rotation.z = 0.5 - progress * 0.5; // Return to normal rotation
+        }
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        if (videoMesh) {
+          videoMesh.material.uniforms.uTime.value = performance.now() * 0.001;
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      init();
+    </script>
+  </body>
+</html>

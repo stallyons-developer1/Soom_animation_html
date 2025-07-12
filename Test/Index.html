@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Big S Curve with Mesh Background</title>
+    <style>
+      body {
+        margin: 0;
+        height: 800vh;
+        overflow-y: scroll;
+        background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
+        font-family: "Arial", sans-serif;
+      }
+      canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        display: block;
+      }
+      .scroll-indicator {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        color: white;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 10px;
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="scroll-indicator">
+      Scroll to see projects move along the S curve
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script>
+      const projects = [
+        {
+          img: "https://placehold.co/400x250/ff6b6b/ffffff?text=Boxing+Project",
+          name: "Boxing",
+        },
+        {
+          img: "https://placehold.co/400x250/4ecdc4/ffffff?text=Yacht+Design",
+          name: "Yacht",
+        },
+        {
+          img: "https://placehold.co/400x250/45b7d1/ffffff?text=Coffee+Brand",
+          name: "Coffee",
+        },
+        {
+          img: "https://placehold.co/400x250/f9ca24/ffffff?text=Portugal+Trip",
+          name: "Portugal",
+        },
+        {
+          img: "https://placehold.co/400x250/6c5ce7/ffffff?text=Studio+Work",
+          name: "Studio",
+        },
+        {
+          img: "https://placehold.co/400x250/a29bfe/ffffff?text=NFT+Art",
+          name: "NFT",
+        },
+        {
+          img: "https://placehold.co/400x250/fd79a8/ffffff?text=SpaceX+Mission",
+          name: "SpaceX",
+        },
+      ];
+
+      let scene, camera, renderer, path;
+      const imageMeshes = [];
+      const radius = 2.5;
+      let scrollProgress = 0;
+      let targetScrollProgress = 0;
+
+      init();
+      animate();
+
+      function init() {
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera(
+          60,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          100
+        );
+        camera.position.set(0, 0, 15);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000, 0);
+        document.body.appendChild(renderer.domElement);
+
+        // 📊 Create simple grid background
+        createSimpleGrid();
+
+        // 🌟 Create a BIGGER S-shaped 3D curve
+        const points = [
+          new THREE.Vector3(-8, 6, 0), // Top-left start
+          new THREE.Vector3(-2, 4, -2), // First curve point
+          new THREE.Vector3(6, 2, 2), // Right curve
+          new THREE.Vector3(0, 0, 0), // Center inflection point (where projects start)
+          new THREE.Vector3(-6, -2, -2), // Left curve
+          new THREE.Vector3(2, -4, 2), // Second curve point
+          new THREE.Vector3(8, -6, 0), // Bottom-right end
+        ];
+        path = new THREE.CatmullRomCurve3(points, false, "catmullrom", 0.3);
+
+        // ✨ Add enhanced dotted path with gradient effect
+        const numDots = 200;
+        const dotGeometry = new THREE.SphereGeometry(0.08, 12, 12);
+
+        for (let i = 0; i <= numDots; i++) {
+          const t = i / numDots;
+          const pos = path.getPointAt(t);
+
+          // Create gradient effect for dots
+          const opacity = Math.sin(t * Math.PI) * 0.8 + 0.2;
+          const dotMaterial = new THREE.MeshBasicMaterial({
+            color: new THREE.Color().setHSL(0.6 + t * 0.4, 0.8, 0.6),
+            transparent: true,
+            opacity: opacity,
+          });
+
+          const dot = new THREE.Mesh(dotGeometry, dotMaterial);
+          dot.position.copy(pos);
+          scene.add(dot);
+        }
+
+        // 🖼️ Load and place curved images
+        const loader = new THREE.TextureLoader();
+
+        projects.forEach((project, index) => {
+          const texture = loader.load(project.img);
+          texture.wrapS = THREE.ClampToEdgeWrapping;
+          texture.wrapT = THREE.ClampToEdgeWrapping;
+
+          // Create curved geometry for images
+          const geometry = new THREE.CylinderGeometry(
+            radius,
+            radius,
+            3,
+            32,
+            1,
+            true,
+            0,
+            Math.PI * 0.6 // Slightly more curved
+          );
+          geometry.rotateY(Math.PI / 2);
+
+          const material = new THREE.MeshBasicMaterial({
+            map: texture,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.9,
+          });
+
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.userData.index = index;
+          mesh.userData.baseScale = 1;
+
+          // Start all images at the center of the S curve (t = 0.5)
+          const centerPoint = path.getPointAt(0.5);
+          mesh.position.copy(centerPoint);
+
+          scene.add(mesh);
+          imageMeshes.push(mesh);
+        });
+
+        // Add ambient lighting for better visibility
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        // 🎯 Resize handler
+        window.addEventListener("resize", () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+      }
+
+      function createSimpleGrid() {
+        const gridSize = 30;
+        const divisions = 15;
+
+        const grid = new THREE.GridHelper(
+          gridSize,
+          divisions,
+          0x0000ff, // Center line color
+          0xff0000 // Grid color
+        );
+
+        // Rotate grid to make it vertical
+        grid.rotation.x = Math.PI / 2;
+
+        // Optional: adjust position if needed
+        grid.position.set(0, 0, 0);
+
+        grid.material.transparent = true;
+        grid.material.opacity = 1;
+
+        scene.add(grid);
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        const time = Date.now() * 0.001;
+
+        const scrollY = window.scrollY || window.pageYOffset;
+        const maxScroll = document.body.scrollHeight - window.innerHeight;
+        targetScrollProgress = scrollY / maxScroll;
+
+        // Smooth scroll interpolation
+        scrollProgress += (targetScrollProgress - scrollProgress) * 0.05;
+
+        const total = imageMeshes.length;
+
+        imageMeshes.forEach((mesh, i) => {
+          // Calculate the position for each image along the curve
+          // All start at center (0.5) and move upward along the curve
+          const basePosition = 0.5; // Center of the S curve
+          const maxMovement = 0.4; // How far up the curve they can go
+
+          // Stagger the movement so images don't all move at the same time
+          const staggerDelay = i * 0.1;
+          const adjustedProgress = Math.max(0, scrollProgress - staggerDelay);
+          const normalizedProgress = Math.min(adjustedProgress * 2, 1);
+
+          // Move from center upward along the curve
+          const t = basePosition + normalizedProgress * maxMovement;
+          const clampedT = Math.min(Math.max(t, 0), 1);
+
+          const point = path.getPointAt(clampedT);
+          const tangent = path.getTangentAt(clampedT);
+
+          // Smooth position interpolation
+          mesh.position.lerp(point, 0.1);
+
+          // Look along the tangent for natural orientation
+          const lookAtPoint = point.clone().add(tangent.multiplyScalar(2));
+          mesh.lookAt(lookAtPoint);
+          mesh.up.set(0, 1, 0);
+
+          // Add some rotation for visual interest
+          mesh.rotation.z = Math.sin(time + i) * 0.1;
+
+          // Scale effect based on progress and distance from camera
+          const distance = camera.position.distanceTo(mesh.position);
+          const scale =
+            1 + (1 - normalizedProgress) * 0.3 + Math.sin(time * 2 + i) * 0.05;
+          mesh.scale.setScalar(scale * (15 / distance));
+
+          // Opacity effect
+          const opacity = 0.7 + normalizedProgress * 0.3;
+          mesh.material.opacity = opacity;
+        });
+
+        // Gentle camera movement
+        camera.position.x = Math.sin(time * 0.5) * 2;
+        camera.position.y = Math.cos(time * 0.3) * 1;
+        camera.lookAt(0, 0, 0);
+
+        renderer.render(scene, camera);
+      }
+    </script>
+  </body>
+</html>

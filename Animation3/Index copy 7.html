@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Perfectly Smooth Spline Path with Paper Fold Video</title>
+    <style>
+      body {
+        margin: 0;
+        background: black;
+        overflow-y: scroll;
+        height: 12000px; /* Extended for center video section */
+        font-family: Arial, sans-serif;
+      }
+
+      #canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        display: block;
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      #three-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.8s ease;
+      }
+
+      #three-container.show-in-center {
+        opacity: 1;
+      }
+
+      #three-container canvas {
+        clip-path: circle(0% at 50% 50%);
+        transition: clip-path 0.5s ease;
+      }
+
+      #three-container.show-rounded canvas {
+        clip-path: inset(25% 20% 25% 20% round 25px);
+      }
+
+      /* Center video positioned at path endpoint */
+      #center-video-container {
+        position: fixed;
+        width: 600px;
+        height: 337px;
+        border-radius: 25px;
+        overflow: hidden;
+        box-shadow: 0 25px 80px rgba(50, 56, 241, 0.4),
+          0 0 0 1px rgba(255, 255, 255, 0.1);
+        z-index: 3;
+        opacity: 0;
+        transform: scale(0.5) rotate(5deg);
+        transition: all 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        pointer-events: none;
+      }
+
+      #center-video-container.active {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+        pointer-events: auto;
+      }
+
+      #center-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 25px;
+      }
+
+      /* Glowing effect for center video at path end */
+      .center-video-glow {
+        position: absolute;
+        top: -5px;
+        left: -5px;
+        right: -5px;
+        bottom: -5px;
+        background: linear-gradient(
+          45deg,
+          #3238f1,
+          #8a2be2,
+          #ff1493,
+          #00ced1,
+          #3238f1
+        );
+        background-size: 400% 400%;
+        border-radius: 30px;
+        z-index: -1;
+        animation: gradientShift 3s ease infinite;
+        opacity: 0;
+        transition: opacity 1s ease;
+      }
+
+      #center-video-container.active .center-video-glow {
+        opacity: 0.6;
+      }
+
+      @keyframes gradientShift {
+        0%,
+        100% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+      }
+      /* Large video section - now appears even later */
+      #large-video-section {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 5;
+        opacity: 0;
+        transition: opacity 1s ease;
+        background: rgba(0, 0, 0, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+
+      #large-video-section.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      #large-video-container {
+        width: 90%;
+        height: 80%;
+        border-radius: 30px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(50, 56, 241, 0.6);
+        position: relative;
+        transform: scale(0.5) rotate(0deg);
+        transition: transform 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+
+      #large-video-section.active #large-video-container {
+        transform: scale(1) rotate(0deg);
+      }
+
+      #large-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 30px;
+      }
+
+      /* Vortex effect overlay */
+      .vortex-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: conic-gradient(
+          from 0deg,
+          transparent 0deg,
+          rgba(50, 56, 241, 0.3) 90deg,
+          rgba(138, 43, 226, 0.3) 180deg,
+          rgba(255, 20, 147, 0.3) 270deg,
+          transparent 360deg
+        );
+        border-radius: 30px;
+        animation: vortexSpin 4s linear infinite;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.8s ease;
+      }
+
+      #large-video-section.active .vortex-overlay {
+        opacity: 1;
+      }
+
+      @keyframes vortexSpin {
+        from {
+          transform: rotate(0deg) scale(1);
+        }
+        to {
+          transform: rotate(360deg) scale(1.05);
+        }
+      }
+
+      /* Spiral particles */
+      .spiral-particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: rgba(50, 56, 241, 0.8);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+
+      .spiral-particle:nth-child(even) {
+        background: rgba(138, 43, 226, 0.8);
+      }
+
+      .spiral-particle:nth-child(3n) {
+        background: rgba(255, 20, 147, 0.8);
+      }
+
+      #video {
+        position: fixed;
+        bottom: 120px;
+        left: 20px;
+        width: 500px;
+        height: 281px;
+        border-radius: 20px;
+        box-shadow: 0 6px 25px rgba(50, 56, 241, 0.4);
+        z-index: 3;
+        opacity: 0.95;
+        transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+
+      #video.spiral-effect {
+        transform: translateY(-200px) scale(0.8) rotate(15deg);
+        opacity: 0.7;
+        filter: blur(2px);
+      }
+
+      #video.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <div id="three-container"></div>
+
+    <!-- Center video positioned at path endpoint -->
+    <div id="center-video-container">
+      <div class="center-video-glow"></div>
+      <video id="center-video" autoplay muted loop crossorigin="anonymous">
+        <source
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          type="video/mp4"
+        />
+      </video>
+    </div>
+
+    <!-- Large video section with vortex effect -->
+    <div id="large-video-section">
+      <div id="large-video-container">
+        <video id="large-video" autoplay muted loop crossorigin="anonymous">
+          <source
+            src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+            type="video/mp4"
+          />
+        </video>
+        <div class="vortex-overlay"></div>
+      </div>
+    </div>
+
+    <video id="video" autoplay muted loop crossorigin="anonymous">
+      <source
+        src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        type="video/mp4"
+      />
+    </video>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+      // Canvas setup for spline path
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      const video = document.getElementById("video");
+      const centerVideo = document.getElementById("center-video");
+      const centerVideoContainer = document.getElementById(
+        "center-video-container"
+      );
+      const largeVideo = document.getElementById("large-video");
+      const largeVideoSection = document.getElementById("large-video-section");
+      const largeVideoContainer = document.getElementById(
+        "large-video-container"
+      );
+      const threeContainer = document.getElementById("three-container");
+
+      // Three.js setup
+      let scene, camera, renderer, videoMesh, videoTexture;
+      let animationId;
+      let isAnimating = false;
+      let videoAnimationState = "initial"; // 'initial', 'animating-forward', 'at-center', 'animating-back'
+
+      // Animation variables
+      let animationProgress = 0;
+      let animationDirection = 1; // 1 for forward, -1 for backward
+
+      // Path completion state
+      let pathCompleted = false;
+      let centerVideoShown = false;
+      let largeVideoShown = false;
+
+      function showCenterVideoAtPathEnd() {
+        // Position center video at the end of the path
+        const pathEndPoint = getPathEndPoint();
+        centerVideoContainer.style.left = pathEndPoint[0] - 300 + "px"; // Center the video
+        centerVideoContainer.style.top = pathEndPoint[1] + 50 + "px"; // Below the path end
+
+        centerVideoContainer.classList.add("active");
+
+        // Ensure center video plays
+        if (centerVideo.paused) {
+          centerVideo
+            .play()
+            .catch((e) => console.log("Center video play failed:", e));
+        }
+      }
+
+      function hideCenterVideoAtPathEnd() {
+        centerVideoContainer.classList.remove("active");
+      }
+
+      function getPathEndPoint() {
+        // Get the last point of the path
+        if (fullPath && fullPath.length > 0) {
+          return fullPath[fullPath.length - 1];
+        }
+        // Fallback position if path not ready
+        return [window.innerWidth * 0.9, window.innerHeight * 0.6];
+      }
+
+      function showLargeVideoSection() {
+        // Add spiral effect to left video
+        video.classList.add("spiral-effect");
+
+        // Show large video section with vortex
+        largeVideoSection.classList.add("active");
+
+        // Create spiral particles
+        createSpiralParticles();
+
+        // Ensure large video plays
+        if (largeVideo.paused) {
+          largeVideo
+            .play()
+            .catch((e) => console.log("Large video play failed:", e));
+        }
+      }
+
+      function hideLargeVideoSection() {
+        // Remove spiral effect from left video
+        video.classList.remove("spiral-effect");
+
+        // Hide large video section
+        largeVideoSection.classList.remove("active");
+
+        // Remove spiral particles
+        document.querySelectorAll(".spiral-particle").forEach((particle) => {
+          particle.remove();
+        });
+      }
+
+      function createSpiralParticles() {
+        // Remove existing particles
+        document.querySelectorAll(".spiral-particle").forEach((particle) => {
+          particle.remove();
+        });
+
+        // Create new spiral particles
+        for (let i = 0; i < 20; i++) {
+          const particle = document.createElement("div");
+          particle.className = "spiral-particle";
+
+          const startAngle = (i / 20) * Math.PI * 2;
+          const radius = 100 + i * 10;
+
+          // Start position around left video
+          const startX = 250 + Math.cos(startAngle) * 100;
+          const startY = window.innerHeight - 280 + Math.sin(startAngle) * 50;
+
+          particle.style.left = startX + "px";
+          particle.style.top = startY + "px";
+
+          document.body.appendChild(particle);
+
+          // Animate particle in spiral to center
+          setTimeout(() => {
+            animateParticleSpiral(particle, i);
+          }, i * 100);
+        }
+      }
+
+      function animateParticleSpiral(particle, index) {
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+
+        let angle = 0;
+        let radius = 300;
+        let spiralSpeed = 0.1;
+
+        function spiral() {
+          if (radius > 0) {
+            angle += spiralSpeed;
+            radius -= 2;
+
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+
+            particle.style.left = x + "px";
+            particle.style.top = y + "px";
+            particle.style.opacity = (radius / 300) * 0.8;
+
+            requestAnimationFrame(spiral);
+          } else {
+            particle.remove();
+          }
+        }
+
+        spiral();
+      }
+
+      // Add continuous rendering for video texture updates
+      function continuousRender() {
+        if (videoAnimationState === "at-center" && videoMesh.visible) {
+          // Force video to play and update texture
+          if (video.paused) {
+            video.play().catch((e) => console.log("Video play failed:", e));
+          }
+          if (videoTexture) {
+            videoTexture.needsUpdate = true;
+          }
+          renderer.render(scene, camera);
+        }
+
+        // Also ensure center video keeps playing
+        if (centerVideoShown && centerVideo.paused) {
+          centerVideo
+            .play()
+            .catch((e) => console.log("Center video play failed:", e));
+        }
+
+        // Also ensure large video keeps playing
+        if (largeVideoShown && largeVideo.paused) {
+          largeVideo
+            .play()
+            .catch((e) => console.log("Large video play failed:", e));
+        }
+
+        requestAnimationFrame(continuousRender);
+      }
+
+      // Set specific video source with crossorigin
+      video.src =
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+      video.crossOrigin = "anonymous";
+      centerVideo.src =
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+      centerVideo.crossOrigin = "anonymous";
+      largeVideo.src =
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+      largeVideo.crossOrigin = "anonymous";
+
+      function makeRoundedCorners(mesh) {
+        // Enhanced function for more pronounced rounded corners
+        const geometry = mesh.geometry;
+        const position = geometry.attributes.position;
+
+        // Store original positions
+        if (!geometry.userData.originalPositionRounded) {
+          geometry.userData.originalPositionRounded = position.array.slice();
+        }
+
+        const original = geometry.userData.originalPositionRounded;
+
+        for (let i = 0; i < position.count; i++) {
+          const index = i * 3;
+          const x = original[index];
+          const y = original[index + 1];
+          const z = original[index + 2];
+
+          // Normalize coordinates based on geometry size (8x4.5)
+          const normalizedX = x / 4;
+          const normalizedY = y / 2.25;
+
+          // Larger corner radius for more visible rounding
+          const cornerRadius = 0.25;
+
+          let newX = x;
+          let newY = y;
+
+          // Create rounded corners
+          if (
+            Math.abs(normalizedX) > 1 - cornerRadius &&
+            Math.abs(normalizedY) > 1 - cornerRadius
+          ) {
+            const cornerX = Math.sign(normalizedX) * (1 - cornerRadius);
+            const cornerY = Math.sign(normalizedY) * (1 - cornerRadius);
+
+            const distFromCorner = Math.sqrt(
+              Math.pow(normalizedX - cornerX, 2) +
+                Math.pow(normalizedY - cornerY, 2)
+            );
+
+            if (distFromCorner > cornerRadius) {
+              const angle = Math.atan2(
+                normalizedY - cornerY,
+                normalizedX - cornerX
+              );
+              const newNormX = cornerX + Math.cos(angle) * cornerRadius;
+              const newNormY = cornerY + Math.sin(angle) * cornerRadius;
+
+              newX = newNormX * 4;
+              newY = newNormY * 2.25;
+            }
+          }
+
+          position.setXYZ(i, newX, newY, z);
+        }
+
+        position.needsUpdate = true;
+        geometry.computeVertexNormals();
+
+        // Also apply CSS-based rounding to material
+        const material = mesh.material;
+        if (material.map) {
+          material.map.wrapS = THREE.ClampToEdgeWrapping;
+          material.map.wrapT = THREE.ClampToEdgeWrapping;
+          material.needsUpdate = true;
+        }
+      }
+
+      function initThreeJS() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(
+          75,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          1000
+        );
+
+        renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000, 0);
+        threeContainer.appendChild(renderer.domElement);
+
+        // Create video texture
+        videoTexture = new THREE.VideoTexture(video);
+        videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.magFilter = THREE.LinearFilter;
+        videoTexture.format = THREE.RGBFormat;
+
+        // Create geometry for paper fold effect - bigger for center video
+        const geometry = new THREE.PlaneGeometry(8, 4.5, 64, 36);
+        const material = new THREE.MeshBasicMaterial({
+          map: videoTexture,
+          side: THREE.DoubleSide,
+        });
+
+        videoMesh = new THREE.Mesh(geometry, material);
+
+        // Add rounded corners to the mesh
+        makeRoundedCorners(videoMesh);
+
+        scene.add(videoMesh);
+
+        // Position camera
+        camera.position.z = 8;
+
+        // Initially hide the Three.js mesh
+        videoMesh.visible = false;
+      }
+
+      function animatePaperFold() {
+        if (!isAnimating) return;
+
+        // Always ensure video is playing and texture is updating
+        if (video.paused) {
+          video.play().catch((e) => console.log("Video play failed:", e));
+        }
+
+        // Force texture update
+        if (videoTexture) {
+          videoTexture.needsUpdate = true;
+        }
+
+        animationProgress += animationDirection * 0.012; // Much slower for smooth slow motion
+        animationProgress = Math.max(0, Math.min(1, animationProgress));
+
+        if (animationDirection === 1) {
+          // Forward animation
+          updatePaperFoldForward(animationProgress);
+
+          if (animationProgress >= 1) {
+            isAnimating = false;
+            videoAnimationState = "at-center";
+            // Hide Three.js container and show center video at path end
+            threeContainer.classList.remove("show-in-center");
+            // Show the center video positioned at path endpoint
+            setTimeout(() => {
+              showCenterVideoAtPathEnd();
+              centerVideoShown = true;
+            }, 500);
+          }
+        } else {
+          // Backward animation
+          updatePaperFoldBackward(animationProgress);
+
+          if (animationProgress <= 0) {
+            isAnimating = false;
+            videoAnimationState = "initial";
+            videoMesh.visible = false;
+            threeContainer.classList.remove("show-in-center");
+            video.classList.remove("hidden");
+            // Hide center video when going back
+            hideCenterVideoAtPathEnd();
+            centerVideoShown = false;
+          }
+        }
+
+        renderer.render(scene, camera);
+
+        if (isAnimating) {
+          animationId = requestAnimationFrame(animatePaperFold);
+        }
+      }
+
+      function updatePaperFoldForward(progress) {
+        const smoothProgress = easeInOutCubic(progress);
+
+        // Phase 1: Video grows and moves from left position to center (0-0.8)
+        if (progress <= 0.8) {
+          const moveProgress = progress / 0.8;
+          const easeMove = easeInOutCubic(moveProgress);
+
+          // Start from exact left video position and size (adjusted for bigger video)
+          const startX = -5.5; // Left side (adjusted for bigger left video)
+          const startY = -2.8; // Bottom (adjusted for bigger left video)
+          const endX = 0; // Center
+          const endY = 0; // Center
+
+          videoMesh.position.x = startX + (endX - startX) * easeMove;
+          videoMesh.position.y = startY + (endY - startY) * easeMove;
+          videoMesh.position.z = 0;
+
+          // Very gentle folding as it moves
+          updateGeometryForFold(moveProgress * 0.6);
+
+          // Subtle rotation - like lifting paper
+          videoMesh.rotation.y = moveProgress * Math.PI * 0.25;
+          videoMesh.rotation.x = moveProgress * Math.PI * 0.12;
+          videoMesh.rotation.z = moveProgress * Math.PI * 0.08;
+
+          // Scale grows from left video size to center size
+          const startScale = 0.7; // Match bigger left video size
+          const endScale = 1.2; // Bigger center size
+          const scale = startScale + (endScale - startScale) * easeMove;
+          videoMesh.scale.set(scale, scale, scale);
+        } else {
+          // Phase 2: Unfold and settle at center (0.8-1.0)
+          const unfoldProgress = (progress - 0.8) / 0.2;
+          const smoothUnfold = easeInOutCubic(unfoldProgress);
+
+          // Stay at center
+          videoMesh.position.x = 0;
+          videoMesh.position.y = 0;
+          videoMesh.position.z = 0;
+
+          // Unfold very smoothly
+          updateGeometryForFold(0.6 * (1 - smoothUnfold));
+
+          // Straighten rotation
+          videoMesh.rotation.y = (1 - smoothUnfold) * Math.PI * 0.25;
+          videoMesh.rotation.x = (1 - smoothUnfold) * Math.PI * 0.12;
+          videoMesh.rotation.z = (1 - smoothUnfold) * Math.PI * 0.08;
+
+          // Final bigger scale
+          const finalScale = 1.2 + smoothUnfold * 0.3; // Much bigger final size
+          videoMesh.scale.set(finalScale, finalScale, finalScale);
+        }
+      }
+
+      function updatePaperFoldBackward(progress) {
+        const reverseProgress = 1 - progress;
+        updatePaperFoldForward(reverseProgress);
+      }
+
+      function updateGeometryForFold(foldAmount) {
+        const geometry = videoMesh.geometry;
+        const position = geometry.attributes.position;
+
+        // Use rounded corners as base, not original flat geometry
+        const basePosition = geometry.userData.originalPositionRounded;
+
+        if (!basePosition) {
+          // If rounded corners not applied yet, store current as base
+          geometry.userData.originalPositionRounded = position.array.slice();
+          return;
+        }
+
+        // Apply gentle folding effect on top of rounded corners
+        for (let i = 0; i < position.count; i++) {
+          const index = i * 3;
+          const baseX = basePosition[index];
+          const baseY = basePosition[index + 1];
+          const baseZ = basePosition[index + 2];
+
+          let newX = baseX;
+          let newY = baseY;
+          let newZ = baseZ;
+
+          // Gentle folding effect
+          const foldIntensity = Math.min(foldAmount, 1);
+
+          // Simple center fold that preserves rounded corners
+          if (baseX > 0) {
+            const foldAngle = foldIntensity * Math.PI * 0.4;
+            const distance = baseX / 4; // Normalize for bigger geometry
+
+            newX = baseX * Math.cos(foldAngle);
+            newZ = baseX * Math.sin(foldAngle) * 0.6;
+
+            // Gentle curve
+            newY = baseY + Math.sin(foldAngle * 0.5) * Math.abs(distance) * 0.3;
+          }
+
+          position.setXYZ(i, newX, newY, newZ);
+        }
+
+        position.needsUpdate = true;
+        geometry.computeVertexNormals();
+      }
+
+      function easeInOutQuart(t) {
+        return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+      }
+
+      function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+
+      function startVideoAnimation(direction) {
+        if (isAnimating) return;
+
+        animationDirection = direction;
+        isAnimating = true;
+
+        if (direction === 1) {
+          // Starting forward animation
+          video.classList.add("hidden");
+          videoMesh.visible = true;
+          threeContainer.classList.add("show-in-center");
+
+          // Reset mesh properties - start from bigger left video position
+          videoMesh.scale.set(0.7, 0.7, 0.7); // Match bigger left video size
+          videoMesh.position.set(-5.5, -2.8, 0); // Adjusted for bigger left video
+          videoMesh.rotation.set(0, 0, 0);
+
+          // Ensure video keeps playing
+          if (video.paused) {
+            video.play().catch((e) => console.log("Video play failed:", e));
+          }
+
+          animationProgress = 0;
+          videoAnimationState = "animating-forward";
+        } else {
+          // Starting backward animation
+          // Hide center video first
+          hideCenterVideoAtPathEnd();
+          centerVideoShown = false;
+
+          // Show Three.js animation
+          setTimeout(() => {
+            threeContainer.classList.add("show-in-center");
+            videoMesh.visible = true;
+          }, 300);
+
+          animationProgress = 1;
+          videoAnimationState = "animating-back";
+        }
+
+        animatePaperFold();
+      }
+
+      // Canvas resize
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        if (camera && renderer) {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+      }
+      resizeCanvas();
+
+      // Spline path code
+      function getUltraSmoothControlPoints() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const centerY = h * 0.5;
+
+        const scaleX = w / 186.3;
+        const scaleY = h / 62.3;
+
+        const transform = (x, y) => [
+          (x + 100.1) * scaleX,
+          centerY - y * scaleY,
+        ];
+
+        return [
+          transform(-100, 31.5),
+          transform(-97.5, 31.5),
+          transform(-95, 31.5),
+          transform(-91, 30.8),
+          transform(-87, 30),
+          transform(-83, 28.5),
+          transform(-79, 27),
+          transform(-75.5, 25),
+          transform(-72, 23),
+          transform(-69, 19.5),
+          transform(-66, 16),
+          transform(-64, 11),
+          transform(-62, 6),
+          transform(-61, 2.5),
+          transform(-60, -1),
+          transform(-60, -4.5),
+          transform(-60, -8),
+          transform(-60.5, -9.5),
+          transform(-61, -11),
+          transform(-61, -13.5),
+          transform(-61, -16),
+          transform(-62, -18.5),
+          transform(-63, -21),
+          transform(-65, -24),
+          transform(-67, -27),
+          transform(-70.5, -28.5),
+          transform(-74, -30),
+          transform(-78, -30),
+          transform(-82, -30),
+          transform(-84.5, -29.5),
+          transform(-87, -29),
+          transform(-89, -25),
+          transform(-91, -21),
+          transform(-91, -19),
+          transform(-91, -17),
+          transform(-88.5, -11),
+          transform(-86, -5),
+          transform(-79.5, 1),
+          transform(-73, 7),
+          transform(-66, 10),
+          transform(-59, 13),
+          transform(-52.5, 14),
+          transform(-46, 15),
+          transform(-41, 13.5),
+          transform(-36, 12),
+          transform(-33, 10.5),
+          transform(-30, 9),
+          transform(-25, 9),
+          transform(-20, 9),
+          transform(-18, 8.75),
+          transform(-16, 8.5),
+          transform(-13, 6.75),
+          transform(-10, 5),
+          transform(-5, 2.5),
+          transform(0, 0),
+          transform(5, -2.5),
+          transform(10, -5),
+          transform(17.5, -7),
+          transform(25, -9),
+          transform(30.5, -9.25),
+          transform(36, -9.5),
+          transform(40.5, -9.75),
+          transform(45, -10),
+          transform(49, -9.25),
+          transform(53, -8.5),
+          transform(57.5, -11.25),
+          transform(62, -14),
+          transform(68, -18.5),
+          transform(74, -23),
+          transform(76.5, -24.5),
+          transform(79, -26),
+          transform(82.5, -26),
+          transform(86, -26),
+          transform(86.1, -25.4),
+          transform(86.2, -24.8),
+        ];
+      }
+
+      function bSplineInterpolation(t, points, degree = 3) {
+        const n = points.length - 1;
+        const knots = [];
+
+        for (let i = 0; i <= n + degree + 1; i++) {
+          knots.push(i);
+        }
+
+        function deBoor(t, degree, points, knots) {
+          const n = points.length - 1;
+
+          let k = degree;
+          while (k <= n && knots[k] <= t) k++;
+          k--;
+
+          const d = [];
+          for (let j = 0; j <= degree; j++) {
+            d[j] = [points[k - degree + j][0], points[k - degree + j][1]];
+          }
+
+          for (let r = 1; r <= degree; r++) {
+            for (let j = degree; j >= r; j--) {
+              const alpha =
+                (t - knots[k - degree + j]) /
+                (knots[k + j - r + 1] - knots[k - degree + j]);
+              d[j] = [
+                (1 - alpha) * d[j - 1][0] + alpha * d[j][0],
+                (1 - alpha) * d[j - 1][1] + alpha * d[j][1],
+              ];
+            }
+          }
+
+          return d[degree];
+        }
+
+        const tMin = knots[degree];
+        const tMax = knots[n + 1];
+        const normalizedT = tMin + (tMax - tMin) * t;
+
+        return deBoor(normalizedT, degree, points, knots);
+      }
+
+      function generatePerfectlySmoothPath(controlPoints, resolution = 10000) {
+        const points = [];
+
+        for (let i = 0; i <= resolution; i++) {
+          const t = i / resolution;
+          const point = bSplineInterpolation(t, controlPoints, 3);
+          points.push(point);
+        }
+
+        return applyAdvancedSmoothing(points, 5);
+      }
+
+      function applyAdvancedSmoothing(points, passes = 5) {
+        let smoothedPoints = [...points];
+
+        for (let pass = 0; pass < passes; pass++) {
+          const newPoints = [smoothedPoints[0]];
+
+          for (let i = 1; i < smoothedPoints.length - 1; i++) {
+            const prev2 = smoothedPoints[Math.max(0, i - 2)];
+            const prev1 = smoothedPoints[i - 1];
+            const curr = smoothedPoints[i];
+            const next1 = smoothedPoints[i + 1];
+            const next2 =
+              smoothedPoints[Math.min(smoothedPoints.length - 1, i + 2)];
+
+            const smoothed = [
+              prev2[0] * 0.05 +
+                prev1[0] * 0.25 +
+                curr[0] * 0.4 +
+                next1[0] * 0.25 +
+                next2[0] * 0.05,
+              prev2[1] * 0.05 +
+                prev1[1] * 0.25 +
+                curr[1] * 0.4 +
+                next1[1] * 0.25 +
+                next2[1] * 0.05,
+            ];
+            newPoints.push(smoothed);
+          }
+
+          newPoints.push(smoothedPoints[smoothedPoints.length - 1]);
+          smoothedPoints = newPoints;
+        }
+
+        return smoothedPoints;
+      }
+
+      let fullPath = generatePerfectlySmoothPath(
+        getUltraSmoothControlPoints(),
+        12000
+      );
+      let visibleProgress = 0;
+
+      function drawPerfectlySmooth(progress) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (progress <= 0) return;
+
+        const visiblePoints = Math.floor(progress * fullPath.length);
+        if (visiblePoints < 2) return;
+
+        ctx.strokeStyle = "#3238F1";
+        ctx.lineWidth = Math.max(24, canvas.width * 0.02);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.shadowColor = "#4A90E2";
+        ctx.shadowBlur = 5;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+
+        const path = new Path2D();
+        path.moveTo(fullPath[0][0], fullPath[0][1]);
+
+        for (let i = 0; i < visiblePoints - 1; i += 1) {
+          const current = fullPath[i];
+          const next = fullPath[Math.min(i + 1, visiblePoints - 1)];
+          const nextNext = fullPath[Math.min(i + 2, visiblePoints - 1)];
+
+          const cp1x = current[0] + (next[0] - current[0]) / 3;
+          const cp1y = current[1] + (next[1] - current[1]) / 3;
+          const cp2x = next[0] - (nextNext[0] - current[0]) / 6;
+          const cp2y = next[1] - (nextNext[1] - current[1]) / 6;
+
+          path.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, next[0], next[1]);
+        }
+
+        ctx.stroke(path);
+        ctx.shadowBlur = 0;
+
+        // MODIFIED: Only trigger video animation when path is COMPLETELY finished
+        if (
+          progress >= 1.0 &&
+          !pathCompleted &&
+          videoAnimationState === "initial"
+        ) {
+          pathCompleted = true;
+          // Add a small delay to ensure the path drawing is visually complete
+          setTimeout(() => {
+            startVideoAnimation(1);
+          }, 300);
+        } else if (
+          progress < 1.0 &&
+          pathCompleted &&
+          (videoAnimationState === "at-center" || centerVideoShown)
+        ) {
+          pathCompleted = false;
+          startVideoAnimation(-1);
+        }
+
+        // Show large video section when scroll reaches 85% (final section)
+        if (progress >= 0.85 && !largeVideoShown) {
+          largeVideoShown = true;
+          showLargeVideoSection();
+        } else if (progress < 0.85 && largeVideoShown) {
+          largeVideoShown = false;
+          hideLargeVideoSection();
+        }
+      }
+
+      // Scroll handling
+      let animationFrame;
+      let lastScrollTime = 0;
+
+      window.addEventListener("scroll", () => {
+        const now = performance.now();
+        if (now - lastScrollTime < 8) return;
+        lastScrollTime = now;
+
+        if (animationFrame) {
+          cancelAnimationFrame(animationFrame);
+        }
+
+        animationFrame = requestAnimationFrame(() => {
+          const scrollTop = window.scrollY;
+          const scrollHeight = document.body.scrollHeight - window.innerHeight;
+          visibleProgress = Math.max(0, Math.min(1, scrollTop / scrollHeight));
+          drawPerfectlySmooth(visibleProgress);
+        });
+      });
+
+      // Resize handler
+      window.addEventListener("resize", () => {
+        resizeCanvas();
+        fullPath = generatePerfectlySmoothPath(
+          getUltraSmoothControlPoints(),
+          12000
+        );
+        drawPerfectlySmooth(visibleProgress);
+
+        // Reposition center video if it's shown
+        if (centerVideoShown) {
+          const pathEndPoint = getPathEndPoint();
+          centerVideoContainer.style.left = pathEndPoint[0] - 300 + "px";
+          centerVideoContainer.style.top = pathEndPoint[1] + 50 + "px";
+        }
+      });
+
+      // Video error handling
+      video.addEventListener("error", () => {
+        console.log("Video failed to load");
+      });
+
+      // Initialize
+      initThreeJS();
+      drawPerfectlySmooth(0);
+      continuousRender(); // Start continuous rendering
+    </script>
+  </body>
+</html>
